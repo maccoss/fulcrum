@@ -18,33 +18,33 @@
    set up by this project template):
 
     ```python
-"""
-project-name: <help string>
+    """
+    project-name: <help string>
 
-Exports:
+    Exports:
 
-- TODO
-  """
+    - TODO
+    """
 
-# Initialize the package.
-try:
-from importlib.metadata import version, PackageNotFoundError
-
+    # Initialize the package.
     try:
-        __version__ = version("package-name")  # TODO: update me!
-    except PackageNotFoundError:
-        pass
+    from importlib.metadata import version, PackageNotFoundError
 
-except ImportError:
-from pkg_resources import get_distribution, DistributionNotFound
+        try:
+            __version__ = version("package-name")  # TODO: update me!
+        except PackageNotFoundError:
+            pass
 
-    try:
-        __version__ = get_distribution("package-name").version  # TODO: update me!
-    except DistributionNotFound:
-        pass
+    except ImportError:
+    from pkg_resources import get_distribution, DistributionNotFound
 
-# Here is where we can export public functions and classes.
-# from .package import Symbol  # import relative to this package to avoid namespace collisions
+        try:
+            __version__ = get_distribution("package-name").version  # TODO: update me!
+        except DistributionNotFound:
+            pass
+
+    # Here is where we can export public functions and classes.
+    from .package import Symbol  # import relative to this package to avoid namespace collisions
     ```
 4. Follow the instructions in `CONTRIBUTING.md` to contribute to the project.
 
