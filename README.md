@@ -19,7 +19,7 @@
 This library requires Python 3.8+ and can be installed with pip:  
 
 ```shell
-pip install my-favorite-project
+pip install my-favorite-project  # TODO
 ```
 
 ## Basic Usage  
@@ -29,7 +29,7 @@ At a minimum, include a brief demo of using the library from the Python REPL:
 
 ```pycon
 >>> from my.favorite.library import function
->>> res = function(*args)
+>>> res = function(*args)  # TODO
 >>> print(res)
 Some amazing output goes here: Hello World.
 ```
