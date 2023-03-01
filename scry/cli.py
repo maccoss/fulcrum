@@ -51,7 +51,8 @@ def main(
     toml_file=None,
 ):
     """
-    Entry point for Scry CLI
+    CLI for the Scry search pipeline. Parameters should be specified using
+    exactly one of the JSON/TOML options listed below.
     """
 
     set_log_level(verbose, quiet)

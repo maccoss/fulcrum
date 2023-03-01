@@ -5,6 +5,14 @@ import subprocess
 import pytest
 
 
+def test_cli_help():
+    """Test that the basic cli works with the help flag"""
+    cmd = ["scry", "--help"]
+    subprocess.run(cmd, check=True)
+
+    # TODO: assertions
+
+
 @pytest.mark.parametrize(
     ["opt", "val_fixture"],
     [("--param-json", "param_json"), ("--json-file", "param_json_file")],
