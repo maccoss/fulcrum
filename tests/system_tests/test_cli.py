@@ -5,12 +5,38 @@ import subprocess
 import pytest
 
 
-def test_cli_basic():
-    """Test that the basic cli works."""
-    cmd = ["scry"]  # TODO: will crash
+@pytest.mark.parametrize(
+    ["opt", "val_fixture"],
+    [
+        ("--param-json", "param_json"),
+        ("--json-file", "param_json_file")
+    ],
+)
+def test_cli_json(request, opt, val_fixture):
+    """Test that the basic cli works with TOML inputs."""
+    pytest.importorskip("toml")
+
+    val = request.getfixturevalue(val_fixture)
+
+    cmd = ["scry", opt, val]
     subprocess.run(cmd, check=True)
 
-    # TODO: assertions
+
+@pytest.mark.parametrize(
+    ["opt", "val_fixture"],
+    [
+        ("--param-toml", "param_toml"),
+        ("--toml-file", "param_toml_file")
+    ],
+)
+def test_cli_toml(request, opt, val_fixture):
+    """Test that the basic cli works with TOML inputs."""
+    pytest.importorskip("toml")
+
+    val = request.getfixturevalue(val_fixture)
+
+    cmd = ["scry", opt, val]
+    subprocess.run(cmd, check=True)
 
 
 def test_cli_none():
