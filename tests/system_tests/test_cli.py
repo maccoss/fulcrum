@@ -16,8 +16,10 @@ def test_cli_json(request, opt, val_fixture):
     """Test that the basic cli works with TOML inputs."""
     val = request.getfixturevalue(val_fixture)
 
-    cmd = ["scry", opt, val]
+    cmd = ["scry", opt, val, "-v"]
     subprocess.run(cmd, check=True)
+
+    # TODO: assertions
 
 
 @pytest.mark.parametrize(
@@ -29,12 +31,14 @@ def test_cli_json(request, opt, val_fixture):
 )
 def test_cli_toml(request, opt, val_fixture):
     """Test that the basic cli works with TOML inputs."""
-    pytest.importorskip("toml")
+    pytest.importorskip("toml")  # skip this test if `toml` isn't installed
 
     val = request.getfixturevalue(val_fixture)
 
     cmd = ["scry", opt, val]
     subprocess.run(cmd, check=True)
+
+    # TODO: assertions
 
 
 def test_cli_none():

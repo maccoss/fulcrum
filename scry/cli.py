@@ -34,15 +34,50 @@ _logger = logging.getLogger(__name__)
     required=False,
     help="A URI or local path to a TOML-encoded parameter file",
 )
-def main(param_json=None, json_file=None, param_toml=None, toml_file=None):
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Increase the level of verbosity. May be specified multiple times."
+)
+@click.option(
+    "-q",
+    "--quiet",
+    count=True,
+    help="Decrease the level of verbosity. May be specified multiple times."
+)
+def main(verbose, quiet, param_json=None, json_file=None, param_toml=None, toml_file=None):
     """
     Entry point for Scry CLI
     """
+
+    set_log_level(verbose, quiet)
+
     params_dict = _parse_args(param_json, json_file, param_toml, toml_file)
 
-    _logger.debug("Parsed parameters: " + json.dumps(params_dict))
+    _logger.debug("Parsed parameters: %s", json.dumps(params_dict))
 
     raise NotImplementedError("TODO")  # TODO
+
+
+def set_log_level(verbose: int, quiet: int):
+    """
+    Set up the logger based on the specified flags.
+    """
+
+    if verbose and quiet:
+        raise ValueError("The --verbose and --quiet flags are mutually exclusive!")
+
+    _def = 2  # WARNING
+    _lvls = [
+        logging.CRITICAL,
+        logging.ERROR,
+        logging.WARNING,
+        logging.INFO,
+        logging.DEBUG,
+    ]
+
+    logging.basicConfig(level=_lvls[_def - quiet + verbose])
 
 
 def _parse_args(param_json=None, json_file=None, param_toml=None, toml_file=None):
