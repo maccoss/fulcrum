@@ -14,8 +14,6 @@ import pytest
 )
 def test_cli_json(request, opt, val_fixture):
     """Test that the basic cli works with TOML inputs."""
-    pytest.importorskip("toml")
-
     val = request.getfixturevalue(val_fixture)
 
     cmd = ["scry", opt, val]
