@@ -24,4 +24,4 @@ except ImportError:
         pass
 
 # Here is where we can export public functions and classes.
-#from .package import Symbol  # import relative to this package to avoid namespace collisions
+# from .package import Symbol  # import relative to this package to avoid namespace collisions

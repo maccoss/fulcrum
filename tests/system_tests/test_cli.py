@@ -7,10 +7,7 @@ import pytest
 
 @pytest.mark.parametrize(
     ["opt", "val_fixture"],
-    [
-        ("--param-json", "param_json"),
-        ("--json-file", "param_json_file")
-    ],
+    [("--param-json", "param_json"), ("--json-file", "param_json_file")],
 )
 def test_cli_json(request, opt, val_fixture):
     """Test that the basic cli works with TOML inputs."""
@@ -24,10 +21,7 @@ def test_cli_json(request, opt, val_fixture):
 
 @pytest.mark.parametrize(
     ["opt", "val_fixture"],
-    [
-        ("--param-toml", "param_toml"),
-        ("--toml-file", "param_toml_file")
-    ],
+    [("--param-toml", "param_toml"), ("--toml-file", "param_toml_file")],
 )
 def test_cli_toml(request, opt, val_fixture):
     """Test that the basic cli works with TOML inputs."""
@@ -64,7 +58,7 @@ _args = [
         for i, a in enumerate(_args)
         for j, b in enumerate(_args)
         if i < j
-    ]
+    ],
 )
 def test_cli_multi(arg1, arg2):
     """Test that the basic cli with too many arguments crashes."""

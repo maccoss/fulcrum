@@ -15,9 +15,7 @@ _logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option(
-    '--param-json',
-    required=False,
-    help="A JSON-encoded parameter string"
+    "--param-json", required=False, help="A JSON-encoded parameter string"
 )
 @click.option(
     "--json-file",
@@ -25,9 +23,7 @@ _logger = logging.getLogger(__name__)
     help="A URI or local path to a JSON-encoded parameter file",
 )
 @click.option(
-    '--param-toml',
-    required=False,
-    help="A TOML-encoded parameter string"
+    "--param-toml", required=False, help="A TOML-encoded parameter string"
 )
 @click.option(
     "--toml-file",
@@ -38,15 +34,22 @@ _logger = logging.getLogger(__name__)
     "-v",
     "--verbose",
     count=True,
-    help="Increase the level of verbosity. May be specified multiple times."
+    help="Increase the level of verbosity. May be specified multiple times.",
 )
 @click.option(
     "-q",
     "--quiet",
     count=True,
-    help="Decrease the level of verbosity. May be specified multiple times."
+    help="Decrease the level of verbosity. May be specified multiple times.",
 )
-def main(verbose, quiet, param_json=None, json_file=None, param_toml=None, toml_file=None):
+def main(
+    verbose,
+    quiet,
+    param_json=None,
+    json_file=None,
+    param_toml=None,
+    toml_file=None,
+):
     """
     Entry point for Scry CLI
     """
@@ -66,7 +69,9 @@ def set_log_level(verbose: int, quiet: int):
     """
 
     if verbose and quiet:
-        raise ValueError("The --verbose and --quiet flags are mutually exclusive!")
+        raise ValueError(
+            "The --verbose and --quiet flags are mutually exclusive!"
+        )
 
     _def = 2  # WARNING
     _lvls = [
@@ -80,23 +85,38 @@ def set_log_level(verbose: int, quiet: int):
     logging.basicConfig(level=_lvls[_def - quiet + verbose])
 
 
-def _parse_args(param_json=None, json_file=None, param_toml=None, toml_file=None):
+def _parse_args(
+    param_json=None, json_file=None, param_toml=None, toml_file=None
+):
     """
     Parse a parameters dictionary from **exactly one** of the provided formats.
     """
 
-    if sum(int(v is not None) for v in [param_json, json_file, param_toml, toml_file]) != 1:
-        raise ValueError("You must specify exactly one of {--param-json, --json-file, --param-toml, --toml-file}!")
+    if (
+        sum(
+            int(v is not None)
+            for v in [param_json, json_file, param_toml, toml_file]
+        )
+        != 1
+    ):
+        raise ValueError(
+            "You must specify exactly one of {--param-json, --json-file, --param-toml, --toml-file}!"
+        )
 
     if param_json is not None:
         return json.loads(param_json)
     if json_file is not None:
-        with fsspec.filesystem(urlparse(json_file, "file").scheme).open(json_file, "r") as f:
+        with fsspec.filesystem(urlparse(json_file, "file").scheme).open(
+            json_file, "r"
+        ) as f:
             return json.load(f)
 
     import toml
+
     if param_toml is not None:
         return toml.loads(param_toml)
     if toml_file is not None:
-        with fsspec.filesystem(urlparse(toml_file, "file").scheme).open(toml_file, "r") as f:
+        with fsspec.filesystem(urlparse(toml_file, "file").scheme).open(
+            toml_file, "r"
+        ) as f:
             return toml.load(f)
