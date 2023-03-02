@@ -3,7 +3,7 @@ scry: Extreme-scale proteomics pipeline
 
 Exports:
 
-- TODO
+- `scry`: programmatic entry point for Scry workflows
 """
 
 # Initialize the package.
@@ -24,4 +24,4 @@ except ImportError:
         pass
 
 # Here is where we can export public functions and classes.
-# from .package import Symbol  # import relative to this package to avoid namespace collisions
+from .scry import scry
