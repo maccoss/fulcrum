@@ -12,7 +12,13 @@ def param_dict():
     """
     Mock parameters in a dict
     """
-    return dict()
+    return dict(
+        search_backend="read_existing",
+        search_kwargs=dict(
+            engine="encyclopedia",
+            file_locations="data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+        ),
+    )
 
 
 @pytest.fixture
