@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 import click
 import fsspec
 
+from .scry import scry
+
 
 _logger = logging.getLogger(__name__)
 
@@ -61,7 +63,7 @@ def main(
 
     _logger.debug("Parsed parameters: %s", json.dumps(params_dict))
 
-    raise NotImplementedError("TODO")  # TODO
+    scry(**params_dict)
 
 
 def set_log_level(verbose: int, quiet: int):

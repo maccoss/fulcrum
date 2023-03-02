@@ -12,7 +12,7 @@ def param_dict():
     """
     Mock parameters in a dict
     """
-    return {}
+    return dict()
 
 
 @pytest.fixture
