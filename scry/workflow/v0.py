@@ -113,9 +113,8 @@ def scry_v0(
         rescored is not None and rescored.data.count() > 0
     ), "Did not get any rescored PSMs!"
 
-    score_name = rescored.score_columns[
-        0
-    ]  # assume the first score is the rescored one
+    # assume the first score is the rescored one
+    score_name = next(iter(rescored.score_columns))
 
     _logger.info(
         'Assigning confidence across the dataset using "%s" (ascending)',
@@ -137,6 +136,13 @@ def scry_v0(
         "Assigned confidence to %d PSMs or peptides in %.02f sec",
         conf.data.count(),
         conf_end - conf_start,
+    )
+
+    test_fdr = 0.01  # TODO
+    _logger.info(
+        "Found %d PSMs or peptides at %.0f%% FDR",
+        conf.data.filter(conf.qvalues <= test_fdr).count(),
+        100 * test_fdr,
     )
 
     return conf
