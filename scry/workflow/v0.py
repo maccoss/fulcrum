@@ -18,7 +18,11 @@ from airpot import (
     BrewResult as _BrewResult,
     RescoringResult as _RescoringResult,
 )
-from wheely.mammoth import PsmDataset as _PsmDataset
+from cortado import assign_confidence as _assign_confidence
+from wheely.mammoth import (
+    PsmDataset as _PsmDataset,
+    ConfidenceDataset as _ConfidenceDataset,
+)
 
 from ..search import (
     search_backends as _search_backends,
@@ -31,8 +35,9 @@ def scry_v0(
     search_backend: _Union[str, _Callable[..., _PsmDataset]] = "read_existing",
     search_kwargs: _Dict[str, _Any] = dict(),
     airpot_kwargs: _Dict[str, _Any] = dict(),
+    cortado_kwargs: _Dict[str, _Any] = dict(),
     spark: _SparkSession = None,
-):
+) -> _ConfidenceDataset:
     """
     scry_v0: initial experimental workflow
 
@@ -108,11 +113,30 @@ def scry_v0(
         rescored is not None and rescored.data.count() > 0
     ), "Did not get any rescored PSMs!"
 
-    # TODO: remaining parts of pipeline
+    score_name = rescored.score_columns[
+        0
+    ]  # assume the first score is the rescored one
 
-    if spark is None:
-        # If the caller did not pass in a Spark session, assume one was created by the search step.
-        # To be a good citizen, clean it up now that we're done with it.
-        # NOTE: if we begin returning a dataset object we should likely remove this code and place
-        # the responsibility on the caller.
-        psms.data.sparkSession.stop()
+    _logger.info(
+        'Assigning confidence across the dataset using "%s" (ascending)',
+        score_name,
+    )
+
+    conf_start = _time()
+
+    conf = _assign_confidence(
+        rescored,
+        score_column=score_name,
+        desc=False,  # just assume rescoring gives an increasing score
+        **cortado_kwargs,
+    )
+
+    conf_end = _time()
+
+    _logger.info(
+        "Assigned confidence to %d PSMs or peptides in %.02f sec",
+        conf.data.count(),
+        conf_end - conf_start,
+    )
+
+    return conf
