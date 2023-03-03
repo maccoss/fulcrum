@@ -11,6 +11,8 @@ from typing import (
     Union as _Union,
 )
 
+from pyspark.sql import SparkSession as _SparkSession
+
 from airpot import (
     brew as _brew,
     BrewResult as _BrewResult,
@@ -29,6 +31,7 @@ def scry_v0(
     search_backend: _Union[str, _Callable[..., _PsmDataset]] = "read_existing",
     search_kwargs: _Dict[str, _Any] = dict(),
     airpot_kwargs: _Dict[str, _Any] = dict(),
+    spark: _SparkSession = None,
 ):
     """
     scry_v0: initial experimental workflow
@@ -48,7 +51,7 @@ def scry_v0(
 
     search_start = _time()
 
-    psms: _PsmDataset = search_backend(**search_kwargs)
+    psms: _PsmDataset = search_backend(**search_kwargs, spark=spark)
 
     search_end = _time()
 
@@ -106,3 +109,10 @@ def scry_v0(
     ), "Did not get any rescored PSMs!"
 
     # TODO: remaining parts of pipeline
+
+    if spark is None:
+        # If the caller did not pass in a Spark session, assume one was created by the search step.
+        # To be a good citizen, clean it up now that we're done with it.
+        # NOTE: if we begin returning a dataset object we should likely remove this code and place
+        # the responsibility on the caller.
+        psms.data.sparkSession.stop()

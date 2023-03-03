@@ -37,7 +37,7 @@ def test_cli_toml(request, opt, val_fixture):
 
     val = request.getfixturevalue(val_fixture)
 
-    cmd = ["scry", opt, val]
+    cmd = ["scry", opt, val, "-v"]
     subprocess.run(cmd, check=True)
 
     # TODO: assertions

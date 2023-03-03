@@ -18,6 +18,10 @@ def param_dict():
             engine="encyclopedia",
             file_locations="data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
         ),
+        airpot_kwargs=dict(
+            subset_size=1024,
+            test_fdr=0.05,
+        ),
     )
 
 
