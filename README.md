@@ -33,11 +33,64 @@ locally will require a Java installation.  You may also configure a connection
 to a Spark cluster by providing an appropriate `SparkSession` instance when
 invoking the API.
 
-**TODO:** include a brief demo of using the library from the Python REPL:
+The full flexibility of Scry is available through the Python library. Usage is
+similar from a REPL or notebook interface:
 
 ```pycon
->>> from my.favorite.library import function
->>> res = function(*args)  # TODO
->>> print(res)
-Some amazing output goes here: Hello World.
+>>> import logging; logging.getLogger().setLevel("INFO")
+>>> from scry import scry
+>>> scry(
+...   workflow = "v0",
+...   search = dict(
+...     backend = "read_existing",
+...     engine = "encyclopedia",
+...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+...   )
+... )
+INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
+INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+```
+
+### CLI
+
+Scry includes a basic CLI that allows access to a subset of the library
+functionality via JSON or TOML parameters:
+
+```shell
+$ scry -v --param-toml '
+> workflow = "v0"
+>
+> [search]
+> backend = "read_existing"
+> engine = "encyclopedia"
+> location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt" 
+> '
+INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
+INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+```
+
+The CLI will accept JSON or TOML as either a string or a file:
+
+```shell
+# JSON string
+scry --param-json '{
+    "workflow": "v0",
+    "search": {
+      "backend": "read_existing",
+      "engine": "encyclopedia",
+      "location": "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt" 
+    }
+}'
+
+# JSON file
+scry --json-file path/to/file.json
+
+# TOML file
+scry --toml-file path/to/file.toml
 ```
