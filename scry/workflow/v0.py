@@ -32,10 +32,9 @@ _logger = _logging.getLogger(__name__)
 
 
 def scry_v0(
-    search_backend: _Union[str, _Callable[..., _PsmDataset]] = "read_existing",
-    search_kwargs: _Dict[str, _Any] = dict(),
-    airpot_kwargs: _Dict[str, _Any] = dict(),
-    cortado_kwargs: _Dict[str, _Any] = dict(),
+    search: _Dict[str, _Any] = dict(),
+    airpot: _Dict[str, _Any] = dict(),
+    cortado: _Dict[str, _Any] = dict(),
     spark: _SparkSession = None,
 ) -> _ConfidenceDataset:
     """
@@ -43,20 +42,30 @@ def scry_v0(
 
     Parameters
     ----------
-    search_backend: SearchBackend, optional
-        The backend that will compute or read search results. Default: `read_existing`
-    search_kwargs: dict
+    search: dict, optional
         Any arguments to pass to the search backend. Notably this will typically include the
         location(s) of any input samples / files necessary to execute the search.
-    airpot_kwargs: dict, optional
-        Any arguments to pass to `airpot` for rescoring the dataset.
+
+        Special keys:
+        - `backend`: The backend that will compute or read search results. Default: `read_existing`
+
+    airpot: dict, optional
+        Any arguments to pass to `airpot` for rescoring search results.
+
+    cortado: dict, optional
+        Any arguments to pass to `cortado` for confidence estimation on the rescored dataset.
+
+    spark: SparkSession, optional
+        A Spark session to use when creating the search result dataset. If `None` a session
+        will be created with default configuration.
     """
+    search_backend = search.pop("backend", "read_existing")
     if not isinstance(search_backend, _Callable):
         search_backend = _search_backends[search_backend]
 
     search_start = _time()
 
-    psms: _PsmDataset = search_backend(**search_kwargs, spark=spark)
+    psms: _PsmDataset = search_backend(**search, spark=spark)
 
     search_end = _time()
 
@@ -71,15 +80,15 @@ def scry_v0(
 
     model_start = _time()
 
-    model: _BrewResult = _brew(psms, **airpot_kwargs)
+    model: _BrewResult = _brew(psms, **airpot)
 
     model_end = _time()
 
     _logger.info("Built rescoring model in %.02f sec", model_end - model_start)
 
     rescored: _PsmDataset
-    if "subset_size" in airpot_kwargs and psms.data.count() > int(
-        airpot_kwargs.pop("subset_size")
+    if "subset_size" in airpot and psms.data.count() > int(
+        airpot.pop("subset_size")
     ):
         # The user requested that airpot train on only a subset of the PSMs
         # so we will need to rescore them.
@@ -89,7 +98,7 @@ def scry_v0(
         rescoring_result: _RescoringResult = _brew(
             psms,
             model=model,
-            **airpot_kwargs,  # we've popped subset_size out of this dict
+            **airpot,  # we've popped subset_size out of this dict
         )
 
         score_end = _time()
@@ -127,7 +136,7 @@ def scry_v0(
         rescored,
         score_column=score_name,
         desc=False,  # just assume rescoring gives an increasing score
-        **cortado_kwargs,
+        **cortado,
     )
 
     conf_end = _time()

@@ -13,14 +13,14 @@ def param_dict():
     Mock parameters in a dict
     """
     return dict(
-        search_backend="read_existing",
-        search_kwargs=dict(
+        search=dict(
+            backend="read_existing",
             engine="encyclopedia",
-            file_locations="data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+            location="data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
         ),
-        airpot_kwargs=dict(
-            subset_size=1024,
-            test_fdr=0.05,
+        airpot=dict(
+            # subset_size=1024,
+            # test_fdr=0.05,
         ),
     )
 

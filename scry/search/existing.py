@@ -23,7 +23,7 @@ _engines = {
 
 def read_existing_results(
     engine: _Union[str, _Callable[..., _PsmDataset]],
-    file_locations: _Union[str, _Iterable[str]],
+    location: _Union[str, _Iterable[str]],
     spark: _SparkSession = None,
 ) -> _PsmDataset:
     """
@@ -33,7 +33,7 @@ def read_existing_results(
     ----------
     engine: str
         The search engine format whose result format will be read.
-    file_locations: str, [str]
+    location: str, [str]
         One or more locations from which results should be read
     spark: SparkSession, optional
         The SparkSession with which to read results / create DataFrames.
@@ -42,4 +42,4 @@ def read_existing_results(
     if not isinstance(engine, _Callable):
         engine = _engines[engine]
 
-    return engine(_listify(file_locations), spark=spark)
+    return engine(_listify(location), spark=spark)
