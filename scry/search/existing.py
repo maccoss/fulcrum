@@ -39,7 +39,11 @@ def read_existing_results(
         The SparkSession with which to read results / create DataFrames.
         If not specified a session will be created with default settings!
     """
-    if not isinstance(engine, _Callable):
-        engine = _engines[engine]
+    _engine: _Callable[..., _PsmDataset]
 
-    return engine(_listify(location), spark=spark)
+    if not callable(engine):
+        _engine = _engines[engine]
+    else:
+        _engine = engine
+
+    return _engine(_listify(location), spark=spark)

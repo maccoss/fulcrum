@@ -27,7 +27,7 @@ def scry(
     **kwargs
         Any keyword arguments are passed directly to the workflow
     """
-    if not isinstance(workflow, _Callable):
+    if not callable(workflow):
         workflow = _workflows[workflow]
 
     result = workflow(spark=spark, **kwargs)

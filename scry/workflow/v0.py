@@ -76,7 +76,7 @@ def scry_v0(
     truthy, the results will be persisted using the specified settings before this method returns.
     """
     search_backend = search.pop("backend", "read_existing")
-    if not isinstance(search_backend, _Callable):
+    if not callable(search_backend):
         search_backend = _search_backends[search_backend]
 
     search_start = _time()
@@ -176,7 +176,7 @@ def scry_v0(
             output = dict(location=output)
 
         output_backend = output.pop("backend", "write_csv")
-        if not isinstance(output_backend, _Callable):
+        if not callable(output_backend):
             output_backend = _output_backends[output_backend]
 
         output_start = _time()
