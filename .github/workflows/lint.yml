@@ -15,6 +15,7 @@ jobs:
       - name: mypy
         uses: tsuyoshicho/action-mypy@v3.9.3
         with:
+          workdir: scry/
           reporter: github-pr-check
           level: error
           tool_name: mypy
