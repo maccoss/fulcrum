@@ -7,7 +7,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+#      - uses: actions/setup-python@v2
+#        with:
+#          python-version: "3.8"
       - run: pip install .[dev,toml]
       - uses: psf/black@stable
       - name: mypy
