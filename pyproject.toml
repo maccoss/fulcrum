@@ -27,3 +27,31 @@ exclude = '''
                      # the root of the project
 )
 '''
+
+[tool.mypy]
+implicit_optional = true  # No longer a default; we should consider disabling this!
+
+[[tool.mypy.overrides]]
+module = "fsspec"
+ignore_missing_imports = true
+
+# TODO
+[[tool.mypy.overrides]]
+module = "airpot"
+ignore_missing_imports = true
+
+# TODO
+[[tool.mypy.overrides]]
+module = "cortado"
+ignore_missing_imports = true
+
+# TODO
+[[tool.mypy.overrides]]
+module = "wheely.mammoth"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "wheely.mammoth.utils"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "wheely.mammoth.parsers"
+ignore_missing_imports = true
