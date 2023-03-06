@@ -26,7 +26,7 @@ def scry(
         Any keyword arguments are passed directly to the workflow
     """
 
-    result = _workflows[workflow](**kwargs)
+    result = _workflows[workflow](spark=spark, **kwargs)
 
     if spark is None:
         # If the caller did not pass in a Spark session, assume one was created.
