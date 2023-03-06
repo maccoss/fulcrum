@@ -1,5 +1,5 @@
 """
-`scry.workflow`: module of
+`scry.workflow`: package for various pre-built workflows
 """
 
 from .v0 import scry_v0
