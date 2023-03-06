@@ -13,21 +13,24 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: [self-hosted]
+    #    runs-on: ${{ matrix.os }}
+    #    strategy:
+    #      matrix:
+    #        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: "3.8"
+    #    - name: Set up Python 3.8
+    #      uses: actions/setup-python@v2
+    #      with:
+    #        python-version: "3.8"
     - name: Install dependencies
       run: |
+        pip config unset global.index-url || true  # Ensure we don't have old CodeArtifact creds in pip config
         python -m pip install --upgrade pip
         pip install flake8 wheel
+        aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
         pip install .[dev,toml]  # dev for testing; also test toml support
     - name: Lint with flake8
       run: |
