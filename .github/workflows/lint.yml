@@ -4,10 +4,11 @@ on: [push, pull_request]
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
+      - run: pip install .[dev,toml]
       - uses: psf/black@stable
       - name: mypy
         uses: tsuyoshicho/action-mypy@v3.9.3
