@@ -1,32 +1,36 @@
 """
 `scry.scry`: this module contains the main entry point for Scry workflows
 """
+from typing import Callable as _Callable, Union as _Union
 from pyspark.sql import SparkSession as _SparkSession
 
-from .workflow.v0 import scry_v0
+from wheely.mammoth import (
+    PsmDataset as _PsmDataset,
+)
 
-_workflows = {
-    "v0": scry_v0,
-}
+from .workflow import workflows as _workflows
 
 
 def scry(
-    workflow: str = "v0",
+    workflow: _Union[str, _Callable[..., _PsmDataset]] = "v0",
     spark: _SparkSession = None,
     **kwargs,
-):
+) -> _PsmDataset:
     """
     `scry()`: run a Scry workflow using the specified parameters
 
     Parameters
     ----------
-    workflow: str, optional
-        The name of a packaged workflow. Default: "v0"
+    workflow: str|Callable, optional
+        The name of a packaged workflow, or a callable matching the expected workflow signature.
+        Default: "v0"
     **kwargs
         Any keyword arguments are passed directly to the workflow
     """
+    if not isinstance(workflow, _Callable):
+        workflow = _workflows[workflow]
 
-    result = _workflows[workflow](spark=spark, **kwargs)
+    result = workflow(spark=spark, **kwargs)
 
     if spark is None:
         # If the caller did not pass in a Spark session, assume one was created.
@@ -34,3 +38,5 @@ def scry(
         # NOTE: if we begin returning a dataset object we should likely remove this code and place
         # the responsibility on the caller.
         result.data.sparkSession.stop()
+
+    return result
