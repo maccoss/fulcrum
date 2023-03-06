@@ -27,6 +27,9 @@ from wheely.mammoth import (
 from ..search import (
     search_backends as _search_backends,
 )
+from ..output import (
+    output_backends as _output_backends,
+)
 
 _logger = _logging.getLogger(__name__)
 
@@ -35,6 +38,7 @@ def scry_v0(
     search: _Dict[str, _Any] = dict(),
     airpot: _Dict[str, _Any] = dict(),
     cortado: _Dict[str, _Any] = dict(),
+    output: _Union[str, _Dict[str, _Any]] = None,
     spark: _SparkSession = None,
 ) -> _ConfidenceDataset:
     """
@@ -55,9 +59,21 @@ def scry_v0(
     cortado: dict, optional
         Any arguments to pass to `cortado` for confidence estimation on the rescored dataset.
 
+    output: str|dict, optional
+        Any arguments to use for outputting FDR-controlled results. If a string, it will be
+        passed to the `location` keyword of the default backend.
+
+        Special keys:
+        - `backend`: The backend that will compute or read search results. Default: `write_csv`
+
     spark: SparkSession, optional
         A Spark session to use when creating the search result dataset. If `None` a session
         will be created with default configuration.
+
+    Returns
+    -------
+    The results of `cortado`'s confidence estimation, backed by a Spark dataframe. If `output` is
+    truthy, the results will be persisted using the specified settings before this method returns.
     """
     search_backend = search.pop("backend", "read_existing")
     if not isinstance(search_backend, _Callable):
@@ -141,9 +157,10 @@ def scry_v0(
 
     conf_end = _time()
 
+    n_confs = conf.data.count()
     _logger.info(
         "Assigned confidence to %d PSMs or peptides in %.02f sec",
-        conf.data.count(),
+        n_confs,
         conf_end - conf_start,
     )
 
@@ -153,5 +170,25 @@ def scry_v0(
         conf.data.filter(conf.qvalues <= test_fdr).count(),
         100 * test_fdr,
     )
+
+    if output:
+        if isinstance(output, str):
+            output = dict(location=output)
+
+        output_backend = output.pop("backend", "write_csv")
+        if not isinstance(output_backend, _Callable):
+            output_backend = _output_backends[output_backend]
+
+        output_start = _time()
+
+        output_backend(data=conf, **output)
+
+        output_end = _time()
+
+        _logger.info(
+            "Wrote results for %d PSMs or peptides in %.02f sec",
+            n_confs,
+            output_end - output_start,
+        )
 
     return conf
