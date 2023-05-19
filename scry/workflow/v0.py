@@ -25,7 +25,7 @@ from wheely.mammoth import (
 )
 
 from ..search import (
-    search_backends as _search_backends,
+    get_backend as _get_search_backend,
 )
 from ..output import (
     output_backends as _output_backends,
@@ -77,7 +77,7 @@ def scry_v0(
     """
     search_backend = search.pop("backend", "read_existing")
     if not callable(search_backend):
-        search_backend = _search_backends[search_backend]
+        search_backend = _get_search_backend(search_backend)
 
     search_start = _time()
 
