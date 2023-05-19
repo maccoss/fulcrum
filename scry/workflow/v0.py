@@ -61,7 +61,8 @@ def scry_v0(
 
     output: str|dict, optional
         Any arguments to use for outputting FDR-controlled results. If a string, it will be
-        passed to the `location` keyword of the default backend.
+        passed to the `location` keyword of the default backend. If unspecified, None, or empty
+        no output will be written.
 
         Special keys:
         - `backend`: The backend that will compute or read search results. Default: `write_csv`
