@@ -25,7 +25,7 @@ from wheely.mammoth import (
 )
 
 from ..search import (
-    search_backends as _search_backends,
+    get_backend as _get_search_backend,
 )
 from ..output import (
     get_backend as _get_output_backend,
@@ -61,7 +61,8 @@ def scry_v0(
 
     output: str|dict, optional
         Any arguments to use for outputting FDR-controlled results. If a string, it will be
-        passed to the `location` keyword of the default backend.
+        passed to the `location` keyword of the default backend. If unspecified, None, or empty
+        no output will be written.
 
         Special keys:
         - `backend`: The backend that will compute or read search results. Default: `write_csv`
@@ -77,7 +78,7 @@ def scry_v0(
     """
     search_backend = search.pop("backend", "read_existing")
     if not callable(search_backend):
-        search_backend = _search_backends[search_backend]
+        search_backend = _get_search_backend(search_backend)
 
     search_start = _time()
 
