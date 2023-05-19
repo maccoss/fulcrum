@@ -28,7 +28,7 @@ from ..search import (
     get_backend as _get_search_backend,
 )
 from ..output import (
-    output_backends as _output_backends,
+    get_backend as _get_output_backend,
 )
 
 _logger = _logging.getLogger(__name__)
@@ -178,7 +178,7 @@ def scry_v0(
 
         output_backend = output.pop("backend", "write_csv")
         if not callable(output_backend):
-            output_backend = _output_backends[output_backend]
+            output_backend = _get_output_backend(output_backend)
 
         output_start = _time()
 
