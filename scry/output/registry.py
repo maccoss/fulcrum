@@ -9,11 +9,13 @@ import logging as _logging
 from importlib_metadata import entry_points
 
 from .confidence import write_csv
+from .library import write_library
 
 _logger = _logging.getLogger(__name__)
 
 _backends = {
     "write_csv": write_csv,
+    "write_library": write_library,
 }
 _plugins = None
 
