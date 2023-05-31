@@ -3,7 +3,10 @@
 suitable for use with library search tools.
 """
 
-from typing import Optional as _Optional
+from typing import (
+    Optional as _Optional,
+    Union as _Union,
+)
 
 from pyspark.sql import Column as _Column
 
@@ -16,7 +19,7 @@ from wheely.mammoth import (
 def write_library(
     data: _PsmDataset,
     location: str,
-    threshold_col: _Optional[str | _Column] = None,
+    threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = 0.01,
 ):
     """
