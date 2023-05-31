@@ -97,7 +97,10 @@ class LibrarySpectraDataset:
         """
         return [
             *self.spectrum_columns,
-            # TODO
+            self.charge_column,
+            self.mz_column,
+            self.rt_column,
+            self.peaklist_column,
         ]
 
     @property
