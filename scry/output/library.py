@@ -88,18 +88,16 @@ def write_library(
     # 2. Join spectral info
     raise NotImplementedError("TODO")
     joined_frags: _DataFrame = None  # TODO
+    charge_col, mz_col, rt_col = (None, None, None)  # TODO
     frag_mz_col, frag_inten_col = (None, None)  # TODO
 
     # 3. Build, name, and select columns
     output = joined_frags.select(
         # TODO: clarify / document this use of `peptide_column`
         _fns.col(psms.peptide_column).alias("ModifiedPeptide"),
-        # FIXME: no such field `charge_column`!!
-        _fns.col(psms.charge_column).alias("PrecursorCharge"),
-        # FIXME: no such field `mz_column`!!
-        _fns.col(psms.mz_column).alias("PrecursorMz"),
-        # FIXME: no such field `rt_column`!!
-        _fns.col(psms.rt_column).alias("Tr_recalibrated"),
+        _fns.col(charge_col).alias("PrecursorCharge"),
+        _fns.col(mz_col).alias("PrecursorMz"),
+        _fns.col(rt_col).alias("Tr_recalibrated"),
         _fns.col(frag_mz_col).alias("ProductMz"),
         _fns.col(frag_inten_col).alias("LibraryIntensity"),
         *(
