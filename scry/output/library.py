@@ -83,10 +83,13 @@ def write_library(
     # 2. Join spectral info
     raise NotImplementedError("TODO")  # TODO
 
-    # 3. Write output
+    # 3. Build, name, and select columns
     # TODO
 
-    # 4. Return
+    # 4. Write output
+    # TODO
+
+    # 5. Return
     return None
 
 
