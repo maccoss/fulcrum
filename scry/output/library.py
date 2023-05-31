@@ -2,6 +2,9 @@
 `scry.output.library` -- workflow module that supports transforming sets of PSMs into a format
 suitable for use with library search tools.
 """
+
+from typing import Optional as _Optional
+
 from pyspark.sql import Column as _Column
 
 from wheely.mammoth import (
@@ -13,7 +16,7 @@ from wheely.mammoth import (
 def write_library(
     data: _PsmDataset,
     location: str,
-    threshold_col: str | _Column = None,
+    threshold_col: _Optional[str | _Column] = None,
     qval_thresh: float = 0.01,
 ):
     """
