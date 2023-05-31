@@ -8,7 +8,11 @@ from typing import (
     Union as _Union,
 )
 
-from pyspark.sql import Column as _Column
+from pyspark.sql import (
+    Column as _Column,
+    DataFrame as _DataFrame,
+    functions as _fns,
+)
 
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
@@ -83,17 +87,23 @@ def write_library(
 
     # 2. Join spectral info
     raise NotImplementedError("TODO")
-    joined_frags = None  # TODO
+    joined_frags: _DataFrame = None  # TODO
+    frag_mz_col, frag_inten_col = (None, None)  # TODO
 
     # 3. Build, name, and select columns
     output = joined_frags.select(
-        TODO.alias("ModifiedPeptide"),  # TODO
-        TODO.alias("PrecursorCharge"),  # TODO
-        TODO.alias("PrecursorMz"),  # TODO
-        TODO.alias("Tr_recalibrated"),  # TODO
-        TODO.alias("ProductMz"),  # TODO
-        TODO.alias("LibraryIntensity"),  # TODO
-        *([TODO.alias("QValue")] if TODO else []),  # TODO
+        # TODO: clarify / document this use of `peptide_column`
+        _fns.col(psms.peptide_column).alias("ModifiedPeptide"),
+        # FIXME: no such field `charge_column`!!
+        _fns.col(psms.charge_column).alias("PrecursorCharge"),
+        # FIXME: no such field `mz_column`!!
+        _fns.col(psms.mz_column).alias("PrecursorMz"),
+        # FIXME: no such field `rt_column`!!
+        _fns.col(psms.rt_column).alias("Tr_recalibrated"),
+        _fns.col(frag_mz_col).alias("ProductMz"),
+        _fns.col(frag_inten_col).alias("LibraryIntensity"),
+        # Note: get col name from _dataset_ not psms
+        *([_fns.col(dataset.qvalue_column).alias("QValue")] if TODO else []),
     )
 
     # 4. Write output
@@ -117,7 +127,7 @@ def _filter_psms(
     dataset: _PsmDataset,
     threshold_col: _Optional[_Union[str, _Column]],
     qval_thresh: float,
-):
+) -> _PsmDataset:
     """
     Return a dataset containing only filtered PSMs, according to the logic described above.
 
