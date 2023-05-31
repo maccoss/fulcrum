@@ -61,7 +61,8 @@ def write_library(
     and its column names, unless noted above.
 
     Future directions:
-    * TODO: add support for other dimensions: e.g. IM
+    * Add support for other dimensions: e.g. IM
+    * Add support for customizing output: e.g. column names, Spark output kwargs, etc.
 
     Parameters
     ----------
@@ -81,13 +82,32 @@ def write_library(
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     # 2. Join spectral info
-    raise NotImplementedError("TODO")  # TODO
+    raise NotImplementedError("TODO")
+    joined_frags = None  # TODO
 
     # 3. Build, name, and select columns
-    # TODO
+    output = joined_frags.select(
+        TODO.alias("ModifiedPeptide"),  # TODO
+        TODO.alias("PrecursorCharge"),  # TODO
+        TODO.alias("PrecursorMz"),  # TODO
+        TODO.alias("Tr_recalibrated"),  # TODO
+        TODO.alias("ProductMz"),  # TODO
+        TODO.alias("LibraryIntensity"),  # TODO
+        *([TODO.alias("QValue")] if TODO else []),  # TODO
+    )
 
     # 4. Write output
-    # TODO
+    #
+    # Repartition to get a single TSV file; this will still produce
+    # an output folder with Spark metadata.
+    # TODO: consider using .toPandas() and writing to the location as a single file, given we're assuming it's small enough for one file anyway
+    output = output.repartition(1)
+
+    output.write.csv(
+        location,
+        sep="\t",
+        header=True,
+    )
 
     # 5. Return
     return None
