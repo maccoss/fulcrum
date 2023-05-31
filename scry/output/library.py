@@ -23,8 +23,10 @@ from wheely.mammoth import (
 def write_library(
     dataset: _PsmDataset,
     output_location: str,
+    spectra_backend: _Union[str, callable],
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = 0.01,
+    **kwargs,
 ):
     """
     Write the given dataset to the given location, formatted for use as a spectral library.
@@ -34,10 +36,13 @@ def write_library(
     a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
     PSMs. Otherwise all PSMs in the dataset will be included in the output.
 
-    * TODO: define the source of spectral / RT information
+    Spectral information -- This module is meant to consume scored and filtered sets of PSMs, that
+    may not necessarily include the necessary spectral information for creating a library.
+    Retrieval of this information is implemented by a pluggable backend implementation capable of
+    fetching the precursor- and fragment-level spectral information for PSMs in a filtered dataset.
 
-    Libraries are written in a TSV format compatible with DIA-NN and EncyclopeDIA, and suitable for
-    conversion to other formats using existing tools. For more information see
+    Output -- Libraries are written in a TSV format compatible with DIA-NN and EncyclopeDIA, and
+    suitable for conversion to other formats using existing tools. For more information see
     [DIA-NN format documentation](https://github.com/vdemichev/DiaNN#spectral-library-formats).
     Each row represents a single fragment ion in the library.
 
@@ -73,10 +78,13 @@ def write_library(
     ----------
     dataset: The dataset
     output_location: The output location (path or URI)
+    spectra_backend (str | callable): The backend implementation used to look up library spectral
+        information for each supplied PSM.
     threshold_col (str | pyspark.sql.Column; optional): A column (or its name) specifying which
         rows will be included in the resulting library.
     qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
         the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
+    **kwargs: Any additional keyword arguments are passed to the spectra_backend callable.
 
     Returns
     -------
@@ -87,6 +95,10 @@ def write_library(
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     # 2. Join spectral info
+    if not callable(spectra_backend):
+        raise NotImplementedError("TODO")
+        spectra_backend = _get_spectra_backend(spectra_backend)  # TODO
+
     raise NotImplementedError("TODO")
     joined_frags: _DataFrame = None  # TODO
     charge_col, mz_col, rt_col = (None, None, None)  # TODO
