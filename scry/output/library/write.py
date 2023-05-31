@@ -3,6 +3,7 @@
 """
 
 from typing import (
+    Callable as _Callable,
     Optional as _Optional,
     Union as _Union,
 )
@@ -24,7 +25,7 @@ from .spectra.registry import get_backend as _get_spectra_backend
 def write_library(
     dataset: _PsmDataset,
     output_location: str,
-    spectra_backend: _Union[str, callable],
+    spectra_backend: _Union[str, _Callable],
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = 0.01,
     **kwargs,
