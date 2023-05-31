@@ -1,6 +1,5 @@
 """
-`scry.output.library` -- workflow module that supports transforming sets of PSMs into a format
-suitable for use with library search tools.
+`scry.output.library.write` -- implements overall workflow module
 """
 
 from typing import (
