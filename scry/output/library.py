@@ -43,8 +43,8 @@ def write_library(
     location: The output location (path or URI)
     threshold_col (str | pyspark.sql.Column; optional): A column (or its name) specifying which
         rows will be included in the resulting library.
-    qval_thresh (float; optional): The largest _q_-value accepted into the library. Ignored if the
-        dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
+    qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
+        the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
 
     Returns
     -------
@@ -66,7 +66,7 @@ def write_library(
 
 def _filter_psms(
     dataset: _PsmDataset,
-    threshold_col: _Union[str, _Column],
+    threshold_col: _Optional[_Union[str, _Column]],
     qval_thresh: float,
 ):
     """
