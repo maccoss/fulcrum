@@ -2,6 +2,8 @@
 `scry.output.library.spectra` -- interface for  spectral information specifically for use in a library
 """
 
+from pyspark.sql import DataFrame as _DataFrame
+
 from wheely.mammoth.utils import listify as _listify
 
 
@@ -46,7 +48,7 @@ class LibrarySpectraDataset:
 
     def __init__(
         self,
-        psms: pyspark.sql.DataFrame,
+        psms: _DataFrame,
         spectrum_columns,
         charge_column,
         mz_column,
