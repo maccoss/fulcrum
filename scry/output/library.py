@@ -22,7 +22,7 @@ from wheely.mammoth import (
 
 def write_library(
     dataset: _PsmDataset,
-    location: str,
+    output_location: str,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = 0.01,
 ):
@@ -57,7 +57,8 @@ def write_library(
     - `ProductMz`
     - `LibraryIntensity` -- relative intensity of the fragment; guaranteed to be numeric and non-negative
 
-    Additional columns that will be written conditionally
+    Additional columns that will be written conditionally:
+
     - `QValue` -- _q_-value if the dataset is a `ConfidenceDataset`
     - `IonMobility` -- currently never written
 
@@ -71,7 +72,7 @@ def write_library(
     Parameters
     ----------
     dataset: The dataset
-    location: The output location (path or URI)
+    output_location: The output location (path or URI)
     threshold_col (str | pyspark.sql.Column; optional): A column (or its name) specifying which
         rows will be included in the resulting library.
     qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
@@ -117,7 +118,7 @@ def write_library(
     output = output.repartition(1)
 
     output.write.csv(
-        location,
+        output_location,
         sep="\t",
         header=True,
     )
