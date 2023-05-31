@@ -18,6 +18,8 @@ from wheely.mammoth import (
     ConfidenceDataset as _ConfidenceDataset,
 )
 
+from .spectra.registry import get_backend as _get_spectra_backend
+
 
 def write_library(
     dataset: _PsmDataset,
@@ -95,8 +97,7 @@ def write_library(
 
     # 2. Join spectral info
     if not callable(spectra_backend):
-        raise NotImplementedError("TODO")
-        spectra_backend = _get_spectra_backend(spectra_backend)  # TODO
+        spectra_backend = _get_spectra_backend(spectra_backend)
 
     raise NotImplementedError("TODO")
     joined_frags: _DataFrame = None  # TODO
