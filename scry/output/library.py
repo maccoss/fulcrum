@@ -102,8 +102,13 @@ def write_library(
         _fns.col(psms.rt_column).alias("Tr_recalibrated"),
         _fns.col(frag_mz_col).alias("ProductMz"),
         _fns.col(frag_inten_col).alias("LibraryIntensity"),
-        # Note: get col name from _dataset_ not psms
-        *([_fns.col(dataset.qvalue_column).alias("QValue")] if TODO else []),
+        *(
+            # Note: get col name from _dataset_ not psms so we only assume the column is preserved,
+            # just in case _filter_psms / with_data returns a different type of dataset.
+            [_fns.col(dataset.qvalue_column).alias("QValue")]
+            if isinstance(dataset, _ConfidenceDataset)
+            else []
+        ),
     )
 
     # 4. Write output
