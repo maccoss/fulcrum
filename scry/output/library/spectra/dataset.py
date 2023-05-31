@@ -31,9 +31,16 @@ class LibrarySpectraDataset:
     peaklist_column :  str
         The name of a column containing structured information in the following format.
         Utilities are provided for conversion to/from other formats using Spark.
-
-        TODO: describe peaklist format
         TODO: impl utils
+
+        The format should be a list of (m/z, intensity) pairs, as a single column. The
+        schema should be equivalent to:
+
+        ```python
+        ArrayType(StructType(StructField("mz", DoubleType()), StructField("intensity", DoubleType)))
+        ```
+
+        Note that the field order (mz, intensity) should be relied on instead of the field names.
 
     Attributes
     ----------
