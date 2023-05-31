@@ -19,7 +19,7 @@ from wheely.mammoth import (
     ConfidenceDataset as _ConfidenceDataset,
 )
 
-from .spectra.registry import get_backend as _get_spectra_backend
+from .spectra import get_backend as _get_spectra_backend
 
 
 def write_library(
