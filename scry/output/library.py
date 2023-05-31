@@ -30,9 +30,35 @@ def write_library(
     a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
     PSMs. Otherwise all PSMs in the dataset will be included in the output.
 
-    This implementation is still in progress:
-    * TODO: define the format in which the library will be written
     * TODO: define the source of spectral / RT information
+
+    Libraries are written in a TSV format compatible with DIA-NN and EncyclopeDIA, and suitable for
+    conversion to other formats using existing tools. For more information see
+    [DIA-NN format documentation](https://github.com/vdemichev/DiaNN#spectral-library-formats).
+    Each row represents a single fragment ion in the library.
+
+    Specifically, the following columns are included, in order:
+
+    These columns are the same for each ion in an entry:
+
+    - `ModifiedPeptide` -- a string representation of the peptide and modifications
+        TODO: some source datasets may define an incompatible string format, which will be preserved
+    - `PrecursorCharge`
+    - `PrecursorMz`
+    - `Tr_recalibrated` -- The retention time of the ID in an arbitrary scale (possibly all the same
+        value, always numeric)
+
+    These columns are specific to each ion in an entry:
+
+    - `ProductMz`
+    - `LibraryIntensity` -- relative intensity of the fragment; guaranteed to be numeric and non-negative
+
+    Additional columns that will be written conditionally
+    - `QValue` -- _q_-value if the dataset is a `ConfidenceDataset`
+    - `IonMobility` -- currently never written
+
+    Currently column names can not be controlled, and are the same regardless of the input dataset
+    and its column names, unless noted above.
 
     Future directions:
     * TODO: add support for other dimensions: e.g. IM
