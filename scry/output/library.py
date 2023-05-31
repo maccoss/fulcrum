@@ -17,7 +17,7 @@ from wheely.mammoth import (
 
 
 def write_library(
-    data: _PsmDataset,
+    dataset: _PsmDataset,
     location: str,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = 0.01,
@@ -26,7 +26,7 @@ def write_library(
     Write the given dataset to the given location, formatted for use as a spectral library.
 
     Filtering -- If the optional `threshold_col` parameter is provided, only rows where this column
-    is `True` will be included in the output. If `theshold_col` is not specified but the datasest is
+    is `True` will be included in the output. If `threshold_col` is not specified but the dataset is
     a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
     PSMs. Otherwise all PSMs in the dataset will be included in the output.
 
@@ -39,7 +39,7 @@ def write_library(
 
     Parameters
     ----------
-    data: The dataset
+    dataset: The dataset
     location: The output location (path or URI)
     threshold_col (str | pyspark.sql.Column; optional): A column (or its name) specifying which
         rows will be included in the resulting library.
@@ -52,13 +52,40 @@ def write_library(
     """
 
     # 1. Filter
-    raise NotImplementedError("TODO")  # TODO
+    psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     # 2. Join spectral info
-    # TODO
+    raise NotImplementedError("TODO")  # TODO
 
     # 3. Write output
     # TODO
 
     # 4. Return
     return None
+
+
+def _filter_psms(
+    dataset: _PsmDataset,
+    threshold_col: _Union[str, _Column],
+    qval_thresh: float,
+):
+    """
+    Return a dataset containing only filtered PSMs, according to the logic described above.
+
+    TODO: tests for this logic
+    """
+
+    if threshold_col is None:
+        if isinstance(dataset, _ConfidenceDataset):
+            if qval_thresh is None:
+                # We require a qval_thresh in this case, but we could fall back to no filtering...
+                raise ValueError("No qval_thresh specified!")
+
+            return dataset.with_data(
+                dataset.data.filter(dataset.qvalues <= qval_thresh)
+            )
+
+        # No filtering possible
+        return dataset
+
+    return dataset.with_data(dataset.data.filter(threshold_col))
