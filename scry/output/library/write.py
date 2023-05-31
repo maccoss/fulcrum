@@ -19,7 +19,10 @@ from wheely.mammoth import (
     ConfidenceDataset as _ConfidenceDataset,
 )
 
-from .spectra import get_backend as _get_spectra_backend
+from .spectra import (
+    LibrarySpectraDataset as _LibSpectra,
+    get_backend as _get_spectra_backend,
+)
 
 
 def write_library(
@@ -100,18 +103,19 @@ def write_library(
     if not callable(spectra_backend):
         spectra_backend = _get_spectra_backend(spectra_backend)
 
-    raise NotImplementedError("TODO")
-    joined_frags: _DataFrame = None  # TODO
-    charge_col, mz_col, rt_col = (None, None, None)  # TODO
+    spectra: _LibSpectra = spectra_backend(psms, **kwargs)
+
+    joined_frags: _DataFrame = _join_psms_to_spectra(psms, spectra)
+
     frag_mz_col, frag_inten_col = (None, None)  # TODO
 
     # 3. Build, name, and select columns
     output = joined_frags.select(
         # TODO: clarify / document this use of `peptide_column`
         _fns.col(psms.peptide_column).alias("ModifiedPeptide"),
-        _fns.col(charge_col).alias("PrecursorCharge"),
-        _fns.col(mz_col).alias("PrecursorMz"),
-        _fns.col(rt_col).alias("Tr_recalibrated"),
+        _fns.col(spectra.charge_column).alias("PrecursorCharge"),
+        _fns.col(spectra.mz_column).alias("PrecursorMz"),
+        _fns.col(spectra.rt_column).alias("Tr_recalibrated"),
         _fns.col(frag_mz_col).alias("ProductMz"),
         _fns.col(frag_inten_col).alias("LibraryIntensity"),
         *(
@@ -165,3 +169,15 @@ def _filter_psms(
         return dataset
 
     return dataset.with_data(dataset.data.filter(threshold_col))
+
+
+def _join_psms_to_spectra(
+    psms: _PsmDataset,
+    spectra: _LibSpectra,
+):
+    """
+    Join PSM and spectrum data, returning a fragment-level dataframe for use with `write_library`.
+
+    TODO: test this function
+    """
+    raise NotImplementedError("TODO")
