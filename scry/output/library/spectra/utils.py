@@ -38,7 +38,7 @@ def rows_to_peaklist(mz_col: _pd.Series, inten_col: _pd.Series) -> _pd.Series:
     This Pandas UDF can be applied to a dataframe of individual peaks, grouped into spectra.
     For each group it will return a single row with all peaks combined into a list of pairs.
     """
-    raise NotImplementedError()
+    return _pd.Series(list(zip(mz_col, inten_col)))
 
 
 @_pandas_udf(returnType=_PeaklistType, functionType=_PandasUDFType.GROUPED_AGG)
