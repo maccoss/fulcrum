@@ -40,10 +40,11 @@ class LibrarySpectraDataset:
         schema should be `PeaklistType`, or equivalent to:
 
         ```python
-        ArrayType(StructType(StructField("mz", DoubleType()), StructField("intensity", DoubleType)))
+        ArrayType(ArrayType(DoubleType()))
         ```
 
-        Note that the field order (mz, intensity) should be relied on instead of the field names.
+        Each inner array must have at least two items (m/z, then intensity). Any items beyond the
+        first two will be ignored.
 
     Attributes
     ----------
@@ -170,10 +171,7 @@ class LibrarySpectraDataset:
 
 
 PeaklistType = _types.ArrayType(
-    _types.StructType(
-        [
-            _types.StructField("mz", _types.DoubleType()),
-            _types.StructField("inten", _types.DoubleType()),
-        ]
-    )
+    _types.ArrayType(
+        _types.DoubleType()
+    )  # length must be >=2; all but first two elements (mz, inten) are ignored
 )

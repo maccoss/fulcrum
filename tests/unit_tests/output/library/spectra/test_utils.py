@@ -89,9 +89,20 @@ def test_peaklist_to_lists(mock_peaklist):
     assert result.iloc[0, 1] == intensity_values
 
 
-def test_peaklist_to_rows(mock_peaklist):
+def test_peaklist_to_vals(mock_peaklist):
     result = mock_peaklist.select(
-        peaklist_to_rows(mock_peaklist.columns[0])
+        peaklist_to_mzs(mock_peaklist.columns[0]),
+        peaklist_to_intens(mock_peaklist.columns[0]),
+    ).toPandas()
+
+    assert len(result.columns) == 2
+    assert result.iloc[:, 0].values == mz_values
+    assert result.iloc[:, 1].values == intensity_values
+
+
+def test_peaklist_to_pairs(mock_peaklist):
+    result = mock_peaklist.select(
+        peaklist_to_pairs(mock_peaklist.columns[0])
     ).toPandas()
 
     assert len(result.columns) == 2

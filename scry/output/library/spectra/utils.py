@@ -7,6 +7,8 @@ import pandas as _pd
 from pyspark.sql import Column as _Column
 from pyspark.sql.functions import (
     PandasUDFType as _PandasUDFType,
+    array as _array,
+    explode as _explode,
     pandas_udf as _pandas_udf,
 )
 
@@ -37,10 +39,27 @@ def peaklist_to_lists(peaklist_col: _Column) -> _Column:
     raise NotImplementedError()
 
 
-def peaklist_to_rows(peaklist_col: _Column) -> _pd.Series:
+def peaklist_to_mzs(peaklist_col: _Column) -> _Column:
     """
-    Convert a single "peaklist" column into multiple rows, each of a single peak, with separate m/z
-    and intensity columns.
-    TODO: define exact signature
+    Convert a single "peaklist" column into a single m/z column with a row for each peak in each of
+    the input spectra.
     """
-    raise NotImplementedError()
+    return _explode(peaklist_col.getItem(0))
+
+
+def peaklist_to_intens(peaklist_col: _Column) -> _Column:
+    """
+    Convert a single "peaklist" column into a single intensity column with a row for each peak in
+    each of the input spectra.
+    """
+    return _explode(peaklist_col.getItem(1))
+
+
+def peaklist_to_pairs(peaklist_col: _Column) -> _Column:
+    """
+    Convert a single "peaklist" column into a single array-valued column with a row for each peak in
+    each of the input spectra. Each row will contain a two-element array giving (m/z, intensity).
+    """
+    return _array(
+        peaklist_to_mzs(peaklist_col), peaklist_to_intens(peaklist_col)
+    )
