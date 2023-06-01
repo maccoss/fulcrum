@@ -171,7 +171,7 @@ class LibrarySpectraDataset:
 
 
 PeaklistType = _types.ArrayType(
-    _types.ArrayType(
+    _types.ArrayType(  # length must be >=2; all but first two elements (mz, inten) are ignored
         _types.DoubleType()
-    )  # length must be >=2; all but first two elements (mz, inten) are ignored
+    )
 )
