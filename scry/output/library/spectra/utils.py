@@ -12,7 +12,7 @@ import pandas as _pd
 from pyspark.sql import Column as _Column
 from pyspark.sql.functions import (
     PandasUDFType as _PandasUDFType,
-    array as _array,
+    arrays_zip as _arrays_zip,
     col as _col,
     explode as _explode,
     pandas_udf as _pandas_udf,
@@ -29,7 +29,7 @@ def lists_to_peaklist(
     Convert two array-typed columns of M/Z and intensity values into an appropriately-structured
     single "peaklist" column.
     """
-    raise NotImplementedError()
+    return _arrays_zip(mz_col, inten_col)
 
 
 @_pandas_udf(returnType=_PeaklistType, functionType=_PandasUDFType.GROUPED_AGG)

@@ -31,13 +31,11 @@ def test_lists_to_peaklist(spark_session):
         schema=schema,
     )
 
-    result = (
-        df.select(lists_to_peaklist(col("mz"), col("intensity")))
-        .toPandas()
-        .values
-    )
+    result = df.select(
+        lists_to_peaklist(col("mz"), col("intensity"))
+    ).toPandas()
 
-    expected_result = [list(zip(mz_values, intensity_values))]
+    expected_result = list(zip(mz_values, intensity_values))
     np.testing.assert_array_equal(result.iloc[0, 0], expected_result)
 
 
