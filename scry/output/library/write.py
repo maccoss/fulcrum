@@ -23,6 +23,9 @@ from .spectra import (
     LibrarySpectraDataset as _LibSpectra,
     get_backend as _get_spectra_backend,
 )
+from .spectra.utils import (
+    peaklist_to_pairs,
+)
 
 
 def write_library(
@@ -105,27 +108,39 @@ def write_library(
 
     spectra: _LibSpectra = spectra_backend(psms, **kwargs)
 
-    joined_frags: _DataFrame = _join_psms_to_spectra(psms, spectra)
+    assert (
+        dataset.spectrum_columns == spectra.spectrum_columns
+    ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
+    joined_frags: _DataFrame = dataset.data.join(
+        spectra, on=dataset.spectrum_columns
+    )
 
-    frag_mz_col, frag_inten_col = (None, None)  # TODO
+    # Selecting this "explodes" the peaklist into one row per fragment peak
+    pairs = peaklist_to_pairs(spectra.peaklists)
 
     # 3. Build, name, and select columns
-    output = joined_frags.select(
-        # TODO: clarify / document this use of `peptide_column`
-        _fns.col(psms.peptide_column).alias("ModifiedPeptide"),
-        _fns.col(spectra.charge_column).alias("PrecursorCharge"),
-        _fns.col(spectra.mz_column).alias("PrecursorMz"),
-        _fns.col(spectra.rt_column).alias("Tr_recalibrated"),
-        _fns.col(frag_mz_col).alias("ProductMz"),
-        _fns.col(frag_inten_col).alias("LibraryIntensity"),
-        *(
-            # Note: get col name from _dataset_ not psms so we only assume the column is preserved,
-            # just in case _filter_psms / with_data returns a different type of dataset.
-            [_fns.col(dataset.qvalue_column).alias("QValue")]
-            if isinstance(dataset, _ConfidenceDataset)
-            else []
-        ),
+    output = (
+        joined_frags.select(
+            # TODO: clarify / document this use of `peptide_column`
+            _fns.col(psms.peptide_column).alias("ModifiedPeptide"),
+            _fns.col(spectra.charge_column).alias("PrecursorCharge"),
+            _fns.col(spectra.mz_column).alias("PrecursorMz"),
+            _fns.col(spectra.rt_column).alias("Tr_recalibrated"),
+            pairs.alias("__peak"),
+        )
+        .withColumn("ProductMz", _fns.col("__peak").getItem(0))
+        .withColumn("LibraryIntensity", _fns.col("__peak").getItem(1))
+        .drop("__peak")
     )
+
+    # Conditionally append column
+    if isinstance(dataset, _ConfidenceDataset):
+        output = output.withColumn(
+            # Note: We take col name from _dataset_ not psms so we only assume the column is
+            # preserved, just in case _filter_psms / with_data returns a different type of dataset.
+            "QValue",
+            _fns.col(dataset.qvalue_column),
+        )
 
     # 4. Write output
     #
