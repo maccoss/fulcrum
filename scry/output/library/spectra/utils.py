@@ -2,7 +2,10 @@
 `scry.output.library.spectra.utils` -- utility methods for handling spectral library peaklists
 """
 
-from typing import Union as _Union
+from typing import (
+    Tuple as _Tuple,
+    Union as _Union,
+)
 
 import pandas as _pd
 
@@ -47,11 +50,28 @@ def pairs_to_peaklist(pair_col: _pd.Series) -> _pd.Series:
     return _pd.Series(list(pair_col))
 
 
-def peaklist_to_lists(peaklist_col: _Union[str, _Column]) -> _Column:
+def peaklist_to_mzs(peaklist_col: _Union[str, _Column]) -> _Column:
     """
-    Convert a single "peaklist" column into two array-typed columns of M/Z and intensity values.
+    Convert a single "peaklist" column into a single column containing pairs of M/Z and intensity arrays.
     """
-    raise NotImplementedError()
+    return _transform(peaklist_col, lambda p: p.getItem(0))
+
+
+def peaklist_to_intens(peaklist_col: _Union[str, _Column]) -> _Column:
+    """
+    Convert a single "peaklist" column into a single column containing pairs of M/Z and intensity arrays.
+    """
+    return _transform(peaklist_col, lambda p: p.getItem(1))
+
+
+def peaklist_to_lists(
+    peaklist_col: _Union[str, _Column]
+) -> _Tuple[_Column, _Column]:
+    """
+    Convert a single "peaklist" column into a single column containing pairs of M/Z and intensity arrays.
+    This effectively transposes the peaklist struct.
+    """
+    return peaklist_to_mzs(peaklist_col), peaklist_to_intens(peaklist_col)
 
 
 def peaklist_to_pairs(peaklist_col: _Union[str, _Column]) -> _Column:

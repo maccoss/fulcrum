@@ -109,7 +109,8 @@ def mock_peaklist(spark_session):
 
 def test_peaklist_to_lists(mock_peaklist):
     result = mock_peaklist.select(
-        peaklist_to_lists(mock_peaklist.columns[0])
+        # Must spread this tuple in a select()
+        *peaklist_to_lists(mock_peaklist.columns[0])
     ).toPandas()
 
     print(result)
