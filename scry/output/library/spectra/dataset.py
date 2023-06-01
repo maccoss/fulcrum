@@ -2,7 +2,10 @@
 `scry.output.library.spectra` -- interface for  spectral information specifically for use in a library
 """
 
-from pyspark.sql import DataFrame as _DataFrame
+from pyspark.sql import (
+    DataFrame as _DataFrame,
+    types as _types,
+)
 
 from wheely.mammoth.utils import listify as _listify
 
@@ -34,7 +37,7 @@ class LibrarySpectraDataset:
         TODO: impl utils
 
         The format should be a list of (m/z, intensity) pairs, as a single column. The
-        schema should be equivalent to:
+        schema should be `PeaklistType`, or equivalent to:
 
         ```python
         ArrayType(StructType(StructField("mz", DoubleType()), StructField("intensity", DoubleType)))
@@ -164,3 +167,13 @@ class LibrarySpectraDataset:
     def peaklist_column(self):
         """The name of the column giving peaklist information."""
         return self._peaklist_column
+
+
+PeaklistType = _types.ArrayType(
+    _types.StructType(
+        [
+            _types.StructField("mz", _types.DoubleType()),
+            _types.StructField("inten", _types.DoubleType()),
+        ]
+    )
+)
