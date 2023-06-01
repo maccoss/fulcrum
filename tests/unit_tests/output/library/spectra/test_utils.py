@@ -37,7 +37,8 @@ def test_lists_to_peaklist(spark_session):
         .values
     )
 
-    assert result == [list(zip(mz_values, intensity_values))]
+    expected_result = [list(zip(mz_values, intensity_values))]
+    np.testing.assert_array_equal(result.iloc[0, 0], expected_result)
 
 
 def test_rows_to_peaklist(spark_session):
@@ -59,7 +60,34 @@ def test_rows_to_peaklist(spark_session):
     result_df = udf_result.toPandas()
 
     expected_result = [(100, 0.5), (101, 0.8), (102, 0.6)]
-    assert result_df.iloc[0, 0] == expected_result
+    np.testing.assert_array_equal(result_df.iloc[0, 0], expected_result)
+
+
+def test_pairs_to_peaklist(spark_session):
+    schema = StructType(
+        [
+            StructField("pair", ArrayType(DoubleType()), nullable=False),
+        ]
+    )
+
+    data = pd.DataFrame(
+        [{"pair": [mz, i]} for mz, i in zip(mz_values, intensity_values)]
+    )
+
+    print(data)
+
+    df = spark_session.createDataFrame(data, schema=schema)
+
+    # Apply the Pandas UDF
+    udf_result = df.groupby().agg(pairs_to_peaklist("pair"))
+
+    # Convert the result back to a regular Pandas DataFrame for easier comparison
+    result_df = udf_result.toPandas()
+
+    print(result_df)
+
+    expected_result = [(100, 0.5), (101, 0.8), (102, 0.6)]
+    np.testing.assert_array_equal(result_df.iloc[0, 0], expected_result)
 
 
 @pytest.fixture
@@ -84,20 +112,12 @@ def test_peaklist_to_lists(mock_peaklist):
         peaklist_to_lists(mock_peaklist.columns[0])
     ).toPandas()
 
+    print(result)
+
     assert len(result.columns) == 2
+    assert len(result) == mock_peaklist.count()
     assert result.iloc[0, 0] == mz_values
     assert result.iloc[0, 1] == intensity_values
-
-
-def test_peaklist_to_vals(mock_peaklist):
-    result = mock_peaklist.select(
-        peaklist_to_mzs(mock_peaklist.columns[0]),
-        peaklist_to_intens(mock_peaklist.columns[0]),
-    ).toPandas()
-
-    assert len(result.columns) == 2
-    assert result.iloc[:, 0].values == mz_values
-    assert result.iloc[:, 1].values == intensity_values
 
 
 def test_peaklist_to_pairs(mock_peaklist):
@@ -105,6 +125,14 @@ def test_peaklist_to_pairs(mock_peaklist):
         peaklist_to_pairs(mock_peaklist.columns[0])
     ).toPandas()
 
-    assert len(result.columns) == 2
-    assert result.iloc[:, 0].values == mz_values
-    assert result.iloc[:, 1].values == intensity_values
+    print(result)
+
+    def _item(i):
+        return lambda l: l[i]
+
+    assert len(result.columns) == 1
+    assert len(result) == len(mz_values)
+    np.testing.assert_array_equal(result.iloc[:, 0].apply(_item(0)), mz_values)
+    np.testing.assert_array_equal(
+        result.iloc[:, 0].apply(_item(1)), intensity_values
+    )
