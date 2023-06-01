@@ -28,3 +28,19 @@ def rows_to_peaklist(mz_col: _pd.Series, inten_col: _pd.Series) -> _pd.Series:
     For each group it will return a single row with all peaks combined into a list of pairs.
     """
     raise NotImplementedError()
+
+
+def peaklist_to_lists(peaklist_col: _Column) -> _Column:
+    """
+    Convert a single "peaklist" column into two array-typed columns of M/Z and intensity values.
+    """
+    raise NotImplementedError()
+
+
+def peaklist_to_rows(peaklist_col: _Column) -> _pd.Series:
+    """
+    Convert a single "peaklist" column into multiple rows, each of a single peak, with separate m/z
+    and intensity columns.
+    TODO: define exact signature
+    """
+    raise NotImplementedError()
