@@ -136,8 +136,8 @@ def write_library(
     # Conditionally append column
     if isinstance(dataset, _ConfidenceDataset):
         output = output.withColumn(
-            # Note: We take col name from _dataset_ not psms so we only assume the column is
-            # preserved, just in case _filter_psms / with_data returns a different type of dataset.
+            # Note: We take col name from _dataset_, so we only assume the column is present
+            # just in case _filter_psms / with_data returns a different type of dataset.
             "QValue",
             _fns.col(dataset.qvalue_column),
         )
