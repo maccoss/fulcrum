@@ -33,7 +33,7 @@ def write_library(
     spectra_backend: _Union[str, _Callable],
     output_location: _Optional[str] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
-    qval_thresh: float = 0.01,
+    qval_thresh: float = None,
     **kwargs,
 ) -> _DataFrame:
     """
@@ -166,19 +166,17 @@ def _filter_psms(
 ) -> _PsmDataset:
     """
     Return a dataset containing only filtered PSMs, according to the logic described above.
-
-    TODO: tests for this logic
     """
 
     if threshold_col is None:
         if isinstance(dataset, _ConfidenceDataset):
-            if qval_thresh is None:
-                # We require a qval_thresh in this case, but we could fall back to no filtering...
-                raise ValueError("No qval_thresh specified!")
-
-            return dataset.with_data(
-                dataset.data.filter(dataset.qvalues <= qval_thresh)
-            )
+            if qval_thresh is not None:
+                return dataset.with_data(
+                    dataset.data.filter(dataset.qvalues <= qval_thresh)
+                )
+            else:
+                # Fall through
+                pass
 
         # No filtering possible
         return dataset
