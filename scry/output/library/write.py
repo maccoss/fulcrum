@@ -100,21 +100,25 @@ def write_library(
     -------
     A PySpark DataFrame with the same contents as the output library.
     """
+    if not spectra_backend:
+        raise ValueError("spectra_backend may not be None!")
+
+    if not callable(spectra_backend):
+        spectra_backend = _get_spectra_backend(spectra_backend)
 
     # 1. Filter
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     # 2. Join spectral info
-    if not callable(spectra_backend):
-        spectra_backend = _get_spectra_backend(spectra_backend)
 
     spectra: _LibSpectra = spectra_backend(psms, **kwargs)
 
     assert (
         dataset.spectrum_columns == spectra.spectrum_columns
     ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
+
     joined_frags: _DataFrame = dataset.data.join(
-        spectra, on=dataset.spectrum_columns
+        spectra.data, on=dataset.spectrum_columns
     )
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
@@ -128,6 +132,12 @@ def write_library(
             _fns.col(spectra.charge_column).alias("PrecursorCharge"),
             _fns.col(spectra.mz_column).alias("PrecursorMz"),
             _fns.col(spectra.rt_column).alias("Tr_recalibrated"),
+            # We must select this up front, it will be aliased into the correct position below
+            *(
+                [_fns.col(dataset.qvalue_column).alias("__qvalue")]
+                if isinstance(dataset, _ConfidenceDataset)
+                else []
+            ),
             pairs.alias("__peak"),
         )
         .withColumn("ProductMz", _fns.col("__peak").getItem(0))
@@ -141,8 +151,8 @@ def write_library(
             # Note: We take col name from _dataset_, so we only assume the column is present
             # just in case _filter_psms / with_data returns a different type of dataset.
             "QValue",
-            _fns.col(dataset.qvalue_column),
-        )
+            _fns.col("__qvalue"),
+        ).drop("")
 
     # 4. Write output
     if output_location:

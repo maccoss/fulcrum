@@ -2,12 +2,13 @@ from typing import Callable
 
 import pytest
 
-from pyspark.sql.functions import col, rand as _rand
+from pyspark.sql.functions import array, col, lit, rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
 from wheely.mammoth.parsers import read_encyclopedia_features
 
 from scry.output.library import write_library
+from scry.output.library.spectra import LibrarySpectraDataset, PeaklistType
 from scry.output.library.write import _filter_psms
 
 
@@ -55,7 +56,30 @@ def spectra_backend() -> Callable:
     -------
     A callable spectral backend compatible with the `psm_dataset` and `confidence_dataset` fixtures.
     """
-    raise NotImplementedError("TODO")
+
+    def get_spectra(psms: PsmDataset) -> LibrarySpectraDataset:
+        """
+        Returns fake spectra for each input PSM.
+        """
+        return LibrarySpectraDataset(
+            psms.data.select(
+                *psms.spectrum_columns,
+            )
+            .withColumn("__z", (rand(seed=0) * 4).astype("int"))
+            .withColumn("__mz", rand(seed=1) * 600 + 400)
+            .withColumn("__rt", col("__mz") + rand(seed=2) * 200)
+            .withColumn(
+                "__peaklist",
+                array(array(lit(1234.567890), lit(1.0))).astype(PeaklistType),
+            ),
+            spectrum_columns=psms.spectrum_columns,
+            charge_column="__z",
+            mz_column="__mz",
+            rt_column="__rt",
+            peaklist_column="__peaklist",
+        )
+
+    return get_spectra
 
 
 @pytest.mark.parametrize(

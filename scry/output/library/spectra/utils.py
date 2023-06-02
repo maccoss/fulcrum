@@ -83,4 +83,4 @@ def peaklist_to_pairs(peaklist_col: _Union[str, _Column]) -> _Column:
     columns. It's typically best to use this pair-based format and `pairs_to_peaklist` than to
     rely on `rows_to_peaklist`.
     """
-    return _explode(_col(peaklist_col))
+    return _explode(peaklist_col)
