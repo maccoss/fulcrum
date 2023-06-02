@@ -30,12 +30,12 @@ from .spectra.utils import (
 
 def write_library(
     dataset: _PsmDataset,
-    output_location: str,
     spectra_backend: _Union[str, _Callable],
+    output_location: _Optional[str] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = 0.01,
     **kwargs,
-):
+) -> _DataFrame:
     """
     Write the given dataset to the given location, formatted for use as a spectral library.
 
@@ -52,7 +52,9 @@ def write_library(
     Output -- Libraries are written in a TSV format compatible with DIA-NN and EncyclopeDIA, and
     suitable for conversion to other formats using existing tools. For more information see
     [DIA-NN format documentation](https://github.com/vdemichev/DiaNN#spectral-library-formats).
-    Each row represents a single fragment ion in the library.
+    Each row represents a single fragment ion in the library. If `output_location` is truthy
+    the library will be written to that location. In all cases, the same dataset is returned by
+    this function as a PySpark DataFrame.
 
     Specifically, the following columns are included, in order:
 
@@ -96,7 +98,7 @@ def write_library(
 
     Returns
     -------
-    `None` on success
+    A PySpark DataFrame with the same contents as the output library.
     """
 
     # 1. Filter
@@ -143,20 +145,18 @@ def write_library(
         )
 
     # 4. Write output
-    #
-    # Repartition to get a single TSV file; this will still produce
-    # an output folder with Spark metadata.
-    # TODO: consider using .toPandas() and writing to the location as a single file, given we're assuming it's small enough for one file anyway
-    output = output.repartition(1)
-
-    output.write.csv(
-        output_location,
-        sep="\t",
-        header=True,
-    )
+    if output_location:
+        # Repartition to get a single TSV file; this will still produce
+        # an output folder with Spark metadata.
+        # TODO: consider using .toPandas() and writing to the location as a single file, given we're assuming it's small enough for one file anyway
+        output.repartition(1).write.csv(
+            output_location,
+            sep="\t",
+            header=True,
+        )
 
     # 5. Return
-    return None
+    return output
 
 
 def _filter_psms(
@@ -184,15 +184,3 @@ def _filter_psms(
         return dataset
 
     return dataset.with_data(dataset.data.filter(threshold_col))
-
-
-def _join_psms_to_spectra(
-    psms: _PsmDataset,
-    spectra: _LibSpectra,
-):
-    """
-    Join PSM and spectrum data, returning a fragment-level dataframe for use with `write_library`.
-
-    TODO: test this function
-    """
-    raise NotImplementedError("TODO")
