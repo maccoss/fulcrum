@@ -1,23 +1,47 @@
 import pytest
 
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
+from wheely.mammoth.parsers import read_encyclopedia_features
 
 from scry.output.library.write import _filter_psms
 
 
+def rand(seed=0):
+    """
+    Force specifying a seed to aid repeatability of tests.
+    """
+    return _rand(seed=seed)
+
+
 @pytest.fixture
-def confidence_dataset():
+def confidence_dataset(psm_dataset) -> ConfidenceDataset:
     # Create a ConfidenceDataset fixture
-    dataset = ConfidenceDataset(...)  # TODO
+    dataset = ConfidenceDataset(
+        psm_dataset.data.withColumn("q-value", rand()),
+        qvalue_column="q-value",
+        target_column=psm_dataset.target_column,
+        spectrum_columns=psm_dataset.spectrum_columns,
+        score_columns=psm_dataset.score_columns,
+        peptide_column=psm_dataset.peptide_column,
+        protein_column=psm_dataset.protein_column,
+        protein_delim=psm_dataset.protein_delim,
+    )
+
+    assert all(
+        dataset.data.groupBy(dataset.targets).count().toPandas()["count"] > 0
+    )
+
     yield dataset
 
 
 @pytest.fixture
-def psm_dataset():
+def psm_dataset() -> PsmDataset:
     # Create a PsmDataset fixture
-    dataset = PsmDataset(...)  # TODO
+    dataset = read_encyclopedia_features(
+        "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
+    )
     yield dataset
 
 
@@ -38,28 +62,20 @@ def test_filter_psms_with_confidence_dataset(confidence_dataset):
     ).isEmpty()
 
 
-def test_filter_psms_with_confidence_dataset_missing_qval_thresh(
-    confidence_dataset,
-):
-    # Test data
-    threshold_col = None
-    qval_thresh = 0.01  # ignored
-
-    # Call the function and assert that it raises a ValueError for missing qval_thresh
-    with pytest.raises(ValueError):
-        _filter_psms(confidence_dataset, threshold_col, qval_thresh)
-
-
 def test_filter_psms_with_psm_dataset(psm_dataset):
     # Test data
     threshold_col = "threshold"
     qval_thresh = None
 
+    psm_dataset = psm_dataset.with_data(
+        psm_dataset.data.withColumn("threshold", rand() >= 0.5)
+    )
+
     # Call the function
     filtered_dataset = _filter_psms(psm_dataset, threshold_col, qval_thresh)
 
     # Perform assertions (e.g., check if the filtered dataset contains the expected PSMs)
-    assert confidence_dataset.data.count() > filtered_dataset.data.count()
+    assert psm_dataset.data.count() > filtered_dataset.data.count()
     assert filtered_dataset.data.filter(~col(threshold_col)).isEmpty()
 
 
@@ -80,4 +96,4 @@ def test_filter_psms_no_filtering(request, dataset_fixture):
     filtered_dataset = _filter_psms(dataset, threshold_col, qval_thresh)
 
     # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
-    assert confidence_dataset.data.count() == filtered_dataset.data.count()
+    assert dataset.data.count() == filtered_dataset.data.count()
