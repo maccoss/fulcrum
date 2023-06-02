@@ -112,6 +112,9 @@ def test_create_library(request, dataset_fixture, spectra_backend):
     if isinstance(dataset, ConfidenceDataset):
         assert "QValue" in result.columns
 
+    for col in result.columns:
+        assert not col.startswith("__"), f"Leaked internal column? {col}"
+
 
 def test_filter_psms_with_confidence_dataset(confidence_dataset):
     # Test data
