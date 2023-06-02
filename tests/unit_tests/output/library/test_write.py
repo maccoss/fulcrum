@@ -1,3 +1,5 @@
+from typing import Callable
+
 import pytest
 
 from pyspark.sql.functions import col, rand as _rand
@@ -5,6 +7,7 @@ from pyspark.sql.functions import col, rand as _rand
 from wheely.mammoth import ConfidenceDataset, PsmDataset
 from wheely.mammoth.parsers import read_encyclopedia_features
 
+from scry.output.library import write_library
 from scry.output.library.write import _filter_psms
 
 
@@ -43,6 +46,47 @@ def psm_dataset() -> PsmDataset:
         "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
     )
     yield dataset
+
+
+@pytest.fixture
+def spectra_backend() -> Callable:
+    """
+    Returns
+    -------
+    A callable spectral backend compatible with the `psm_dataset` and `confidence_dataset` fixtures.
+    """
+    raise NotImplementedError("TODO")
+
+
+@pytest.mark.parametrize(
+    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+)
+def test_create_library(request, dataset_fixture, spectra_backend):
+    """
+    Test that we can build a library DataFrame from our PSM and spectrum fixtures.
+    """
+    dataset = request.getfixturevalue(dataset_fixture)
+
+    result = write_library(
+        dataset, spectra_backend=spectra_backend, output_location=None
+    )
+
+    print(result.toPandas())
+
+    # Check that the result has at least one peak per spectrum
+    assert result.count() >= dataset.data.count()
+
+    # Check for expected columns
+    for col in [
+        "ModifiedPeptide",
+        "PrecursorCharge",
+        "PrecursorMz",
+        "ProductMz",
+    ]:
+        assert col in result.columns
+
+    if isinstance(dataset, ConfidenceDataset):
+        assert "QValue" in result.columns
 
 
 def test_filter_psms_with_confidence_dataset(confidence_dataset):
