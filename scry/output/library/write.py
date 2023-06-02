@@ -152,7 +152,7 @@ def write_library(
             # just in case _filter_psms / with_data returns a different type of dataset.
             "QValue",
             _fns.col("__qvalue"),
-        ).drop("")
+        ).drop("__qvalue")
 
     # 4. Write output
     if output_location:
