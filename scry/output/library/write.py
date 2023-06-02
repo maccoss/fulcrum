@@ -103,15 +103,18 @@ def write_library(
     if not spectra_backend:
         raise ValueError("spectra_backend may not be None!")
 
-    if not callable(spectra_backend):
-        spectra_backend = _get_spectra_backend(spectra_backend)
+    _spectra_backend: _Callable
+    if callable(spectra_backend):
+        _spectra_backend = spectra_backend
+    else:
+        _spectra_backend = _get_spectra_backend(spectra_backend)
 
     # 1. Filter
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     # 2. Join spectral info
 
-    spectra: _LibSpectra = spectra_backend(psms, **kwargs)
+    spectra: _LibSpectra = _spectra_backend(psms, **kwargs)
 
     assert (
         dataset.spectrum_columns == spectra.spectrum_columns
@@ -172,7 +175,7 @@ def write_library(
 def _filter_psms(
     dataset: _PsmDataset,
     threshold_col: _Optional[_Union[str, _Column]],
-    qval_thresh: float,
+    qval_thresh: _Optional[float],
 ) -> _PsmDataset:
     """
     Return a dataset containing only filtered PSMs, according to the logic described above.
