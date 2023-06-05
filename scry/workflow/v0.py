@@ -66,6 +66,9 @@ def scry_v0(
 
         Special keys:
         - `backend`: The backend that will compute or read search results. Default: `write_csv`
+           Either a string referring to a backend or plugin, or a callable. If a callable the
+           `ConfidenceDataset` will be passed as the first argument, and any other items in the
+           dict will be passed as keyword arguments.
 
     spark: SparkSession, optional
         A Spark session to use when creating the search result dataset. If `None` a session
@@ -182,7 +185,7 @@ def scry_v0(
 
         output_start = _time()
 
-        output_backend(data=conf, **output)
+        output_backend(conf, **output)
 
         output_end = _time()
 
