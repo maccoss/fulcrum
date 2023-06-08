@@ -6,9 +6,9 @@ from pyspark.sql.functions import array, col, lit, rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
 from wheely.mammoth.parsers import read_encyclopedia_features
+from wheely.mammoth.spectra import SpectraDataset, PeaklistType
 
 from scry.output.library import write_library
-from scry.output.library.spectra import LibrarySpectraDataset, PeaklistType
 from scry.output.library.write import _filter_psms
 
 
@@ -57,11 +57,11 @@ def spectra_backend() -> Callable:
     A callable spectral backend compatible with the `psm_dataset` and `confidence_dataset` fixtures.
     """
 
-    def get_spectra(psms: PsmDataset) -> LibrarySpectraDataset:
+    def get_spectra(psms: PsmDataset) -> SpectraDataset:
         """
         Returns fake spectra for each input PSM.
         """
-        return LibrarySpectraDataset(
+        return SpectraDataset(
             psms.data.select(
                 *psms.spectrum_columns,
             )

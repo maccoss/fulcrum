@@ -18,14 +18,14 @@ from wheely.mammoth import (
     PsmDataset as _PsmDataset,
     ConfidenceDataset as _ConfidenceDataset,
 )
-
-from .spectra import (
-    LibrarySpectraDataset as _LibSpectra,
-    get_backend as _get_spectra_backend,
+from wheely.mammoth.spectra import (
+    SpectraDataset as _LibSpectra,
 )
-from .spectra.utils import (
+from wheely.mammoth.spectra.utils import (
     peaklist_to_pairs,
 )
+
+from .spectra import get_backend as _get_spectra_backend
 
 
 def write_library(
