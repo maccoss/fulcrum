@@ -3,5 +3,4 @@
 specifically for use in a library
 """
 
-from .dataset import LibrarySpectraDataset, PeaklistType
 from .registry import get_backend, register_backend
