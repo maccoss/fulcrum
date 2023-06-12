@@ -141,11 +141,11 @@ def write_library(
                 if isinstance(dataset, _ConfidenceDataset)
                 else []
             ),
-            pairs.alias("__peak"),
+            pairs,
         )
-        .withColumn("ProductMz", _fns.col("__peak").getItem(0))
-        .withColumn("LibraryIntensity", _fns.col("__peak").getItem(1))
-        .drop("__peak")
+        .withColumn("ProductMz", pairs.getItem(0))
+        .withColumn("LibraryIntensity", pairs.getItem(1))
+        .drop(pairs)
     )
 
     # Conditionally append column
