@@ -19,7 +19,7 @@ def param_dict():
     return dict(
         search=dict(
             backend="read_existing",
-            engine="encyclopedia",
+            engine="encyclopedia",  # Note: provided by wheely-mammoth plugin
             location="data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
         ),
         airpot=dict(
