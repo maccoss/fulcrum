@@ -16,14 +16,11 @@ from importlib_metadata import entry_points
 from pyspark.sql import SparkSession as _SparkSession
 
 from wheely.mammoth import PsmDataset as _PsmDataset
-from wheely.mammoth.parsers import read_encyclopedia_features
 from wheely.mammoth.utils import listify as _listify
 
 _logger = _logging.getLogger(__name__)
 
-_engines = {
-    "encyclopedia": read_encyclopedia_features,
-}
+_engines = {}
 _plugins = None
 
 
