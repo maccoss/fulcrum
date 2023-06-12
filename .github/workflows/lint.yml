@@ -11,8 +11,9 @@ jobs:
 #        with:
 #          python-version: "3.8"
       - run: |
-          aws codeartifact login --tool twine --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
-          pip install .[dev,toml]
+          pip install 'awscli>=1.18.83'
+          aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
+          pip install '.[dev,toml]'
       - uses: psf/black@stable
       - name: mypy
         uses: tsuyoshicho/action-mypy@v3.9.3
