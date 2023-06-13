@@ -22,7 +22,7 @@ from wheely.mammoth.spectra import (
     SpectraDataset as _LibSpectra,
 )
 from wheely.mammoth.spectra.utils import (
-    peaklist_to_pairs,
+    peaklist_to_pairs as _peaklist_to_pairs,
 )
 
 from .spectra import get_backend as _get_spectra_backend
@@ -125,7 +125,9 @@ def write_library(
     )
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
-    pairs = peaklist_to_pairs(spectra.peaklists)
+    peak = _peaklist_to_pairs(_fns.col(spectra.peaklist_column)).alias(
+        "__peak"
+    )
 
     # 3. Build, name, and select columns
     output = (
@@ -141,10 +143,13 @@ def write_library(
                 if isinstance(dataset, _ConfidenceDataset)
                 else []
             ),
-            pairs.alias("__peak"),
+            peak,
         )
-        .withColumn("ProductMz", _fns.col("__peak").getItem(0))
-        .withColumn("LibraryIntensity", _fns.col("__peak").getItem(1))
+        .select(
+            "*",
+            _fns.col("__peak").getItem(0).alias("ProductMz"),
+            _fns.col("__peak").getItem(1).alias("LibraryIntensity"),
+        )
         .drop("__peak")
     )
 
