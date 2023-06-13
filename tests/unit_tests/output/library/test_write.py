@@ -70,7 +70,10 @@ def spectra_backend() -> Callable:
             .withColumn("__rt", col("__mz") + rand(seed=2) * 200)
             .withColumn(
                 "__peaklist",
-                array(array(lit(1234.567890), lit(1.0))).astype(PeaklistType),
+                array(
+                    array(lit(1234.567890), lit(0.67)),
+                    array(lit(123.456789), lit(0.33)),
+                ).astype(PeaklistType),
             ),
             spectrum_columns=psms.spectrum_columns,
             charge_column="__z",
