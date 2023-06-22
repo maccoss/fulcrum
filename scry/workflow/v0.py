@@ -76,8 +76,9 @@ def scry_v0(
 
     Returns
     -------
-    The results of `cortado`'s confidence estimation, backed by a Spark dataframe. If `output` is
-    truthy, the results will be persisted using the specified settings before this method returns.
+    Either the results of the `output` module (if `output` is truthy and the backend returns a
+    value other than `None`). If no `output` is specified, or if the output backend returns `None`
+    this workflow will return the results from the `cortado` module.
     """
     search_backend = search.pop("backend", "read_existing")
     if not callable(search_backend):
@@ -185,7 +186,7 @@ def scry_v0(
 
         output_start = _time()
 
-        output_backend(conf, **output)
+        output_result = output_backend(conf, **output)
 
         output_end = _time()
 
@@ -194,5 +195,7 @@ def scry_v0(
             n_confs,
             output_end - output_start,
         )
+    else:
+        output_result = None
 
-    return conf
+    return conf if output_result is None else output_result
