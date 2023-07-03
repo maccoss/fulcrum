@@ -29,7 +29,7 @@ jobs:
       run: |
         pip config unset global.index-url || true  # Ensure we don't have old CodeArtifact creds in pip config
         python -m pip install --upgrade pip
-        pip install flake8 wheel
+        pip install flake8 wheel 'awscli>=1.18.83'
         aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
         pip install .[dev,toml]  # dev for testing; also test toml support
     - name: Lint with flake8
