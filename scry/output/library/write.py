@@ -31,6 +31,7 @@ from .spectra import get_backend as _get_spectra_backend
 def write_library(
     dataset: _PsmDataset,
     spectra_backend: _Union[str, _Callable],
+    location: _Optional[str] = None,
     output_location: _Optional[str] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
@@ -87,7 +88,8 @@ def write_library(
     Parameters
     ----------
     dataset: The dataset
-    output_location: The output location (path or URI)
+    location: The output location (path or URI)
+    output_location: DEPRECATED synonym for `location`
     spectra_backend (str | callable): The backend implementation used to look up library spectral
         information for each supplied PSM.
     threshold_col (str | pyspark.sql.Column; optional): A column (or its name) specifying which
@@ -100,6 +102,9 @@ def write_library(
     -------
     A PySpark DataFrame with the same contents as the output library.
     """
+    if not location:
+        location = output_location
+
     if not spectra_backend:
         raise ValueError("spectra_backend may not be None!")
 
@@ -163,12 +168,12 @@ def write_library(
         ).drop("__qvalue")
 
     # 4. Write output
-    if output_location:
+    if location:
         # Repartition to get a single TSV file; this will still produce
         # an output folder with Spark metadata.
         # TODO: consider using .toPandas() and writing to the location as a single file, given we're assuming it's small enough for one file anyway
         output.repartition(1).write.csv(
-            output_location,
+            location,
             sep="\t",
             header=True,
         )
