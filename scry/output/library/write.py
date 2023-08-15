@@ -2,6 +2,7 @@
 `scry.output.library.write` -- implements overall workflow module
 """
 
+import logging as _logging
 from typing import (
     Callable as _Callable,
     Optional as _Optional,
@@ -26,6 +27,8 @@ from wheely.mammoth.spectra.utils import (
 )
 
 from .spectra import get_backend as _get_spectra_backend
+
+_logger = _logging.getLogger(__name__)
 
 
 def write_library(
@@ -117,17 +120,37 @@ def write_library(
     # 1. Filter
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
-    # 2. Join spectral info
+    if _logger.isEnabledFor(_logging.INFO):
+        n_filt = psms.data.count()
+        _logger.info("Building library from %d PSMs (after filtering)", n_filt)
+        assert n_filt >= 0
+    else:
+        assert not psms.data.isEmpty()
 
+    # 2. Join spectral info
     spectra: _LibSpectra = _spectra_backend(psms, **kwargs)
+
+    if _logger.isEnabledFor(_logging.INFO):
+        n_spec = spectra.data.count()
+        _logger.info("Found %d spectra", n_spec)
+        assert n_spec > 0
+    else:
+        assert not spectra.data.isEmpty()
 
     assert (
         dataset.spectrum_columns == spectra.spectrum_columns
     ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
 
-    joined_frags: _DataFrame = dataset.data.alias("psms").join(
+    joined_df: _DataFrame = dataset.data.alias("psms").join(
         spectra.data.alias("spectra"), on=dataset.spectrum_columns
     )
+
+    if _logger.isEnabledFor(_logging.INFO):
+        n_join = joined_df.count()
+        _logger.info("Will write %d PSMs to library (after join)", n_join)
+        assert n_join > 0
+    else:
+        assert not joined_df.isEmpty()
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
     peak = _peaklist_to_pairs(
@@ -136,7 +159,7 @@ def write_library(
 
     # 3. Build, name, and select columns
     output = (
-        joined_frags.select(
+        joined_df.select(
             # TODO: clarify / document this use of `peptide_column`
             _fns.col("psms." + psms.peptide_column).alias("ModifiedPeptide"),
             _fns.col("spectra." + spectra.charge_column).alias(
