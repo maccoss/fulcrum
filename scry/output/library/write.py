@@ -125,26 +125,28 @@ def write_library(
         dataset.spectrum_columns == spectra.spectrum_columns
     ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
 
-    joined_frags: _DataFrame = dataset.data.join(
-        spectra.data, on=dataset.spectrum_columns
+    joined_frags: _DataFrame = dataset.data.alias("psms").join(
+        spectra.data.alias("spectra"), on=dataset.spectrum_columns
     )
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
-    peak = _peaklist_to_pairs(_fns.col(spectra.peaklist_column)).alias(
-        "__peak"
-    )
+    peak = _peaklist_to_pairs(
+        _fns.col("spectra." + spectra.peaklist_column)
+    ).alias("__peak")
 
     # 3. Build, name, and select columns
     output = (
         joined_frags.select(
             # TODO: clarify / document this use of `peptide_column`
-            _fns.col(psms.peptide_column).alias("ModifiedPeptide"),
-            _fns.col(spectra.charge_column).alias("PrecursorCharge"),
-            _fns.col(spectra.mz_column).alias("PrecursorMz"),
-            _fns.col(spectra.rt_column).alias("Tr_recalibrated"),
+            _fns.col("psms." + psms.peptide_column).alias("ModifiedPeptide"),
+            _fns.col("spectra." + spectra.charge_column).alias(
+                "PrecursorCharge"
+            ),
+            _fns.col("spectra." + spectra.mz_column).alias("PrecursorMz"),
+            _fns.col("spectra." + spectra.rt_column).alias("Tr_recalibrated"),
             # We must select this up front, it will be aliased into the correct position below
             *(
-                [_fns.col(dataset.qvalue_column).alias("__qvalue")]
+                [_fns.col("psms." + dataset.qvalue_column).alias("__qvalue")]
                 if isinstance(dataset, _ConfidenceDataset)
                 else []
             ),
