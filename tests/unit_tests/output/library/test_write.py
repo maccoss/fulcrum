@@ -206,6 +206,39 @@ def test_normalize_peptides_noop(request, dataset_fixture):
 @pytest.mark.parametrize(
     "dataset_fixture", ["psm_dataset", "confidence_dataset"]
 )
+def test_normalize_peptides_unmod(request, dataset_fixture):
+    """
+    Check that normalization works for unmodified peptides.
+    Runs on both dataset fixtures to check the same logic applies to both kinds of dataset.
+    """
+    dataset = request.getfixturevalue(dataset_fixture)
+
+    # Filter to just peptides w/o mods
+    dataset = dataset.with_data(
+        dataset.data.filter(not dataset.peptides.rlike("[\[\]\(\)]"))
+    )
+
+    assert dataset.data.count() > 0
+
+    # Call the function
+    norm_psms = _normalize_peptides(dataset, backend=None)  # Use default
+
+    # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
+    assert dataset.data.count() == norm_psms.data.count()
+
+    assert_array_equal(
+        dataset.data.select(dataset.peptides)
+        .toPandas()[dataset.peptide_column]
+        .values,
+        norm_psms.data.select(norm_psms.peptides)
+        .toPandas()[norm_psms.peptide_column]
+        .values,
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+)
 def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     """
     Check that normalization works for C+57 and/or M+16.
