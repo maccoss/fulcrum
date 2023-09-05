@@ -250,7 +250,7 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     dataset = dataset.with_data(
         dataset.data.filter(
             # Assumes EncyclopeDIA-formatted input
-            dataset.peptides.rlike("C\[(\+)?57|M\[(\+)?1[56]")
+            dataset.peptides.rlike("C\[(?:\+)?57|M\[(?:\+)?1[56]")
         )
     )
 
@@ -266,8 +266,12 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     assert_array_equal(
         dataset.data.select(dataset.peptides)
         .toPandas()[dataset.peptide_column]
-        .str.replace("(?<=C)\[57(\.)?[0-9]*\]", "(Unimod:4)", regex=True)
-        .str.replace("(?<=M)\[1[56](\.)?[0-9]*\]", "(Unimod:35)", regex=True)
+        .str.replace(
+            "(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(Unimod:4)", regex=True
+        )
+        .str.replace(
+            "(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(Unimod:35)", regex=True
+        )
         .values,
         norm_psms.data.select(norm_psms.peptides)
         .toPandas()[norm_psms.peptide_column]
