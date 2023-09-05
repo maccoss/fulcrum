@@ -261,8 +261,8 @@ def _normalize_peptides(
     psms: The dataset that will be normalized
     backend: A callable that will be passed each peptide value, returning the normalized value.
         If unspecified or `None` a generic normalizer will be used, which provides a "best-effort"
-        normalization to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). A false-y value will
-        disable normalization.
+        normalization to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). Any other false-y value
+        will disable normalization.
         TODO: support a registry of available backend normalizers and permit `backend` to be a str
     kwargs: Any keyword arguments will be passed to each invocation of `backend`.
 

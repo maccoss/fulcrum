@@ -2,6 +2,8 @@ from typing import Callable
 
 import pytest
 
+from numpy.testing import assert_array_equal
+
 from pyspark.sql.functions import array, col, lit, rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
@@ -9,7 +11,10 @@ from wheely.mammoth.parsers import read_encyclopedia_features
 from wheely.mammoth.spectra import SpectraDataset, PeaklistType
 
 from scry.output.library import write_library
-from scry.output.library.write import _filter_psms
+from scry.output.library.write import (
+    _filter_psms,
+    _normalize_peptides,
+)
 
 
 def rand(seed=0):
@@ -171,3 +176,67 @@ def test_filter_psms_no_filtering(request, dataset_fixture):
 
     # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
     assert dataset.data.count() == filtered_dataset.data.count()
+
+
+@pytest.mark.parametrize(
+    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+)
+def test_normalize_peptides_noop(request, dataset_fixture):
+    """
+    Runs on both dataset fixtures to check the same logic applies to both kinds of dataset.
+    """
+    dataset = request.getfixturevalue(dataset_fixture)
+
+    # Call the function
+    norm_psms = _normalize_peptides(dataset, backend=None)
+
+    # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
+    assert dataset.data.count() == norm_psms.data.count()
+
+    assert_array_equal(
+        dataset.data.select(dataset.peptides)
+        .toPandas()[dataset.peptide_column]
+        .values,
+        norm_psms.data.select(norm_psms.peptides)
+        .toPandas()[norm_psms.peptide_column]
+        .values,
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+)
+def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
+    """
+    Check that normalization works for C+57 and/or M+16.
+    Runs on both dataset fixtures to check the same logic applies to both kinds of dataset.
+    """
+    dataset = request.getfixturevalue(dataset_fixture)
+
+    # Filter to just peptides w/ mods of interest
+    dataset = dataset.with_data(
+        dataset.data.filter(
+            # Assumes EncyclopeDIA-formatted input
+            dataset.peptides.rlike("C\[(\+)?57|M\[(\+)?1[56]")
+        )
+    )
+
+    # Note: we don't check if both mods are present, just that at least one is
+    assert dataset.data.count() > 0
+
+    # Call the function
+    norm_psms = _normalize_peptides(dataset, backend=None)
+
+    # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
+    assert dataset.data.count() == norm_psms.data.count()
+
+    assert_array_equal(
+        dataset.data.select(dataset.peptides)
+        .toPandas()[dataset.peptide_column]
+        .str.replace("(?<=C)\[57(\.)?[0-9]*\]", "(Unimod:4)", regex=True)
+        .str.replace("(?<=M)\[1[56](\.)?[0-9]*\]", "(Unimod:35)", regex=True)
+        .values,
+        norm_psms.data.select(norm_psms.peptides)
+        .toPandas()[norm_psms.peptide_column]
+        .values,
+    )
