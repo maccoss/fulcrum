@@ -327,18 +327,18 @@ def _normalize_peptides(
     A PSM dataset with the `peptide_column` values normalized by the given backend.
     """
     if backend is None:
-        backend = _normalize_peptide_heuristic
-    elif not backend:
+        _backend = _normalize_peptide_heuristic
+    elif not backend:  # type: ignore[truthy-function]
         return psms
 
-    assert callable(backend)
+    assert callable(_backend)
 
     orig_pep_col = "__peptide_orig"
     return psms.with_data(
         psms.data.withColumnRenamed(psms.peptide_column, orig_pep_col)
         .withColumn(
             psms.peptide_column,
-            _fns.udf(lambda seq: backend(seq, **kwargs))(
+            _fns.udf(lambda seq: _backend(seq, **kwargs))(
                 _fns.col(orig_pep_col)
             ),
         )
