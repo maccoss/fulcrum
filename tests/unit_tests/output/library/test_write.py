@@ -188,7 +188,7 @@ def test_normalize_peptides_noop(request, dataset_fixture):
     dataset = request.getfixturevalue(dataset_fixture)
 
     # Call the function
-    norm_psms = _normalize_peptides(dataset, backend=None)
+    norm_psms = _normalize_peptides(dataset, backend=False)  # Use no-op
 
     # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
     assert dataset.data.count() == norm_psms.data.count()
@@ -225,7 +225,7 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     assert dataset.data.count() > 0
 
     # Call the function
-    norm_psms = _normalize_peptides(dataset, backend=None)
+    norm_psms = _normalize_peptides(dataset, backend=None)  # Use default
 
     # Perform assertions (e.g., check if the filtered dataset is the same as the original dataset)
     assert dataset.data.count() == norm_psms.data.count()
