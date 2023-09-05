@@ -252,7 +252,7 @@ def _filter_psms(
 _mod_heuristic_pattern = _re.compile(r"([A-Z])(\[.+?\]|\(.+?\))")
 
 
-def _normalize_mod_heuristic(match):
+def _normalize_mod_heuristic(match: _re.Match) -> str:
     """
     Default "best-effort" modification normalizer, based on heuristics that address only common use
     cases.
@@ -265,7 +265,25 @@ def _normalize_mod_heuristic(match):
     -------
     A reformatted string meant to be compatible (but not guaranteed to be!) with DIA-NN.
     """
-    raise NotImplementedError("TODO")
+    residue = match.group(1)
+
+    # Ignore captured brackets
+    mod = match.group(2)[1:-1]
+
+    try:
+        delta = float(mod)
+    except:
+        # Not a numeric mod; give up!
+        pass
+    else:
+        # Heuristic lookup
+        if residue.upper() == "C" and round(delta) == 57:
+            return residue + "(Unimod:4)"
+        if residue.upper() == "M" and round(delta) == 16:
+            return residue + "(Unimod:35)"
+
+    # Give up; return the originally-captured (sub)string
+    return match.group(0)
 
 
 def _normalize_peptide_heuristic(seq):
