@@ -3,8 +3,11 @@
 """
 
 import logging as _logging
+import re as _re
 from typing import (
+    Any as _Any,
     Callable as _Callable,
+    Dict as _Dict,
     Optional as _Optional,
     Union as _Union,
 )
@@ -38,6 +41,7 @@ def write_library(
     output_location: _Optional[str] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
+    peptide_normalizer: _Optional[_Dict[str, _Any]] = None,
     **kwargs,
 ) -> _DataFrame:
     """
@@ -64,8 +68,9 @@ def write_library(
 
     These columns are the same for each ion in an entry:
 
-    - `ModifiedPeptide` -- a string representation of the peptide and modifications
-        TODO: some source datasets may define an incompatible string format, which will be preserved
+    - `ModifiedPeptide` -- a string representation of the peptide and modifications. This will be
+        taken from the input dataset's `peptide_column` then (optionally) normalized by the
+        specified `peptide_normalizer`.
     - `PrecursorCharge`
     - `PrecursorMz`
     - `Tr_recalibrated` -- The retention time of the ID in an arbitrary scale (possibly all the same
@@ -99,8 +104,14 @@ def write_library(
         rows will be included in the resulting library.
     qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
         the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
+    peptide_normalizer (dict; optional): A dict whose `backend` (a `callable`) will be called to
+        normalize each `ModifiedPeptide` value (from `dataset.peptide_column`). Any dict entries
+        other than `backend` will be passed to the callable as keyword arguments. If unspecified
+        or `None` a generic normalizer will be used, which provides a "best-effort" normalization
+        to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). A false-y value for `peptide_normalizer`
+        or `peptide_normalizer["backend"]` will disable normalization.
+        TODO: support a registry of available backend normalizers and permit `backend` to be a str
     **kwargs: Any additional keyword arguments are passed to the spectra_backend callable.
-
     Returns
     -------
     A PySpark DataFrame with the same contents as the output library.
@@ -117,7 +128,7 @@ def write_library(
     else:
         _spectra_backend = _get_spectra_backend(spectra_backend)
 
-    # 1. Filter
+    # 1. Filter / normalize
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     if _logger.isEnabledFor(_logging.INFO):
@@ -127,8 +138,13 @@ def write_library(
     else:
         assert not psms.data.isEmpty()
 
+    if peptide_normalizer:
+        norm_psms = _normalize_peptides(psms, **peptide_normalizer)
+    else:
+        norm_psms = psms
+
     # 2. Join spectral info
-    spectra: _LibSpectra = _spectra_backend(psms, **kwargs)
+    spectra: _LibSpectra = _spectra_backend(norm_psms, **kwargs)
 
     if _logger.isEnabledFor(_logging.INFO):
         n_spec = spectra.data.count()
@@ -230,3 +246,101 @@ def _filter_psms(
         return dataset
 
     return dataset.with_data(dataset.data.filter(threshold_col))
+
+
+#: Pattern used to find modifications that will be string-substituted
+_mod_heuristic_pattern = _re.compile(r"([A-Z])(\[.+?\]|\(.+?\))")
+
+
+def _normalize_mod_heuristic(match: _re.Match) -> str:
+    """
+    Default "best-effort" modification normalizer, based on heuristics that address only common use
+    cases.
+
+    Parameters
+    ----------
+    match: A match object, corresponding to the `_mod_heuristic_pattern`.
+
+    Returns
+    -------
+    A reformatted string meant to be compatible (but not guaranteed to be!) with DIA-NN.
+    """
+    residue = match.group(1)
+
+    # Ignore captured brackets
+    mod = match.group(2)[1:-1]
+
+    try:
+        delta = float(mod)
+    except:
+        # Not a numeric mod; give up!
+        pass
+    else:
+        # Heuristic lookup
+        if residue.upper() == "C" and round(delta) == 57:
+            return residue + "(Unimod:4)"
+        if residue.upper() == "M" and round(delta) == 16:
+            return residue + "(Unimod:35)"
+
+    # Give up; return the originally-captured (sub)string
+    return match.group(0)
+
+
+def _normalize_peptide_heuristic(seq):
+    """
+    Default "best-effort" peptide normalizer, based on heuristics that address only common use cases.
+
+    Parameters
+    ----------
+    seq: A peptide sequence string, including mods in a "typical" format.
+
+    Returns
+    -------
+    A reformatted string meant to be compatible (but not guaranteed to be!) with DIA-NN.
+    """
+    return _mod_heuristic_pattern.sub(
+        string=seq, repl=_normalize_mod_heuristic
+    )
+
+
+def _normalize_peptides(
+    psms: _PsmDataset, backend: _Optional[_Callable], **kwargs
+) -> _PsmDataset:
+    """
+    Normalize each value from `dataset.peptide_column`.
+
+    peptide_normalizer (dict; optional): A dict whose `backend` (a `callable`) will be called to
+        Any dict entries
+        other than `backend` will be passed to the callable as keyword arguments.
+    Parameters
+    ----------
+    psms: The dataset that will be normalized
+    backend: A callable that will be passed each peptide value, returning the normalized value.
+        If unspecified or `None` a generic normalizer will be used, which provides a "best-effort"
+        normalization to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). Any other false-y value
+        will disable normalization.
+        TODO: support a registry of available backend normalizers and permit `backend` to be a str
+    kwargs: Any keyword arguments will be passed to each invocation of `backend`.
+
+    Returns
+    -------
+    A PSM dataset with the `peptide_column` values normalized by the given backend.
+    """
+    if backend is None:
+        _backend = _normalize_peptide_heuristic
+    elif not backend:  # type: ignore[truthy-function]
+        return psms
+
+    assert callable(_backend)
+
+    orig_pep_col = "__peptide_orig"
+    return psms.with_data(
+        psms.data.withColumnRenamed(psms.peptide_column, orig_pep_col)
+        .withColumn(
+            psms.peptide_column,
+            _fns.udf(lambda seq: _backend(seq, **kwargs))(
+                _fns.col(orig_pep_col)
+            ),
+        )
+        .drop(orig_pep_col)
+    )
