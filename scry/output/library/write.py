@@ -3,6 +3,7 @@
 """
 
 import logging as _logging
+import re as _re
 from typing import (
     Any as _Any,
     Callable as _Callable,
@@ -247,6 +248,41 @@ def _filter_psms(
     return dataset.with_data(dataset.data.filter(threshold_col))
 
 
+#: Pattern used to find modifications that will be string-substituted
+_mod_heuristic_pattern = _re.compile(r"([A-Z])(\[.+?\]|\(.+?\))")
+
+
+def _normalize_mod_heuristic(match):
+    """
+    Default "best-effort" modification normalizer, based on heuristics that address only common use
+    cases.
+
+    Parameters
+    ----------
+    match: A match object, corresponding to the `_mod_heuristic_pattern`.
+
+    Returns
+    -------
+    A reformatted string meant to be compatible (but not guaranteed to be!) with DIA-NN.
+    """
+    raise NotImplementedError("TODO")
+
+
+def _normalize_peptide_heuristic(seq):
+    """
+    Default "best-effort" peptide normalizer, based on heuristics that address only common use cases.
+
+    Parameters
+    ----------
+    seq: A peptide sequence string, including mods in a "typical" format.
+
+    Returns
+    -------
+    A reformatted string meant to be compatible (but not guaranteed to be!) with DIA-NN.
+    """
+    return _mod_heuristic_pattern.sub(seq, repl=_normalize_mod_heuristic)
+
+
 def _normalize_peptides(
     psms: _PsmDataset, backend: _Optional[_Callable], **kwargs
 ) -> _PsmDataset:
@@ -270,4 +306,13 @@ def _normalize_peptides(
     -------
     A PSM dataset with the `peptide_column` values normalized by the given backend.
     """
-    raise NotImplementedError("TODO: implement peptide normalization")
+    if backend is None:
+        raise NotImplementedError(
+            "TODO: default peptide normalization backend"
+        )
+    elif not backend:
+        return psms
+
+    assert callable(backend)
+
+    raise NotImplementedError("TODO: peptide normalization")
