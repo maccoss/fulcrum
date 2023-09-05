@@ -280,7 +280,9 @@ def _normalize_peptide_heuristic(seq):
     -------
     A reformatted string meant to be compatible (but not guaranteed to be!) with DIA-NN.
     """
-    return _mod_heuristic_pattern.sub(seq, repl=_normalize_mod_heuristic)
+    return _mod_heuristic_pattern.sub(
+        string=seq, repl=_normalize_mod_heuristic
+    )
 
 
 def _normalize_peptides(
@@ -313,4 +315,14 @@ def _normalize_peptides(
 
     assert callable(backend)
 
-    raise NotImplementedError("TODO: peptide normalization")
+    orig_pep_col = "__peptide_orig"
+    return psms.with_data(
+        psms.data.withColumnRenamed(psms.peptide_column, orig_pep_col)
+        .withColumn(
+            psms.peptide_column,
+            _fns.udf(lambda seq: backend(seq, **kwargs))(
+                _fns.col(orig_pep_col)
+            ),
+        )
+        .drop(orig_pep_col)
+    )
