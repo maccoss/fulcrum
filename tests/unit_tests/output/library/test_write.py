@@ -215,7 +215,7 @@ def test_normalize_peptides_unmod(request, dataset_fixture):
 
     # Filter to just peptides w/o mods
     dataset = dataset.with_data(
-        dataset.data.filter(not dataset.peptides.rlike("[\[\]\(\)]"))
+        dataset.data.filter(~dataset.peptides.rlike("[\[\]\(\)]"))
     )
 
     assert dataset.data.count() > 0
