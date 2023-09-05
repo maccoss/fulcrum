@@ -307,9 +307,7 @@ def _normalize_peptides(
     A PSM dataset with the `peptide_column` values normalized by the given backend.
     """
     if backend is None:
-        raise NotImplementedError(
-            "TODO: default peptide normalization backend"
-        )
+        backend = _normalize_peptide_heuristic
     elif not backend:
         return psms
 
