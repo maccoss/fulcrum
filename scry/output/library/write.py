@@ -4,7 +4,9 @@
 
 import logging as _logging
 from typing import (
+    Any as _Any,
     Callable as _Callable,
+    Dict as _Dict,
     Optional as _Optional,
     Union as _Union,
 )
@@ -38,6 +40,7 @@ def write_library(
     output_location: _Optional[str] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
+    peptide_normalizer: _Optional[_Dict[str, _Any]] = None,
     **kwargs,
 ) -> _DataFrame:
     """
@@ -64,8 +67,9 @@ def write_library(
 
     These columns are the same for each ion in an entry:
 
-    - `ModifiedPeptide` -- a string representation of the peptide and modifications
-        TODO: some source datasets may define an incompatible string format, which will be preserved
+    - `ModifiedPeptide` -- a string representation of the peptide and modifications. This will be
+        taken from the input dataset's `peptide_column` then (optionally) normalized by the
+        specified `peptide_normalizer`.
     - `PrecursorCharge`
     - `PrecursorMz`
     - `Tr_recalibrated` -- The retention time of the ID in an arbitrary scale (possibly all the same
@@ -99,8 +103,14 @@ def write_library(
         rows will be included in the resulting library.
     qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
         the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
+    peptide_normalizer (dict; optional): A dict whose `backend` (a `callable`) will be called to
+        normalize each `ModifiedPeptide` value (from `dataset.peptide_column`). Any dict entries
+        other than `backend` will be passed to the callable as keyword arguments. If unspecified
+        or `None` a generic normalizer will be used, which provides a "best-effort" normalization
+        to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). A false-y value for `peptide_normalizer`
+        or `peptide_normalizer["backend"]` will disable normalization.
+        TODO: support a registry of available backend normalizers and permit `backend` to be a str
     **kwargs: Any additional keyword arguments are passed to the spectra_backend callable.
-
     Returns
     -------
     A PySpark DataFrame with the same contents as the output library.
@@ -117,7 +127,7 @@ def write_library(
     else:
         _spectra_backend = _get_spectra_backend(spectra_backend)
 
-    # 1. Filter
+    # 1. Filter / normalize
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
 
     if _logger.isEnabledFor(_logging.INFO):
@@ -127,8 +137,13 @@ def write_library(
     else:
         assert not psms.data.isEmpty()
 
+    if peptide_normalizer:
+        norm_psms = _normalize_peptides(psms, **peptide_normalizer)
+    else:
+        norm_psms = psms
+
     # 2. Join spectral info
-    spectra: _LibSpectra = _spectra_backend(psms, **kwargs)
+    spectra: _LibSpectra = _spectra_backend(norm_psms, **kwargs)
 
     if _logger.isEnabledFor(_logging.INFO):
         n_spec = spectra.data.count()
@@ -230,3 +245,29 @@ def _filter_psms(
         return dataset
 
     return dataset.with_data(dataset.data.filter(threshold_col))
+
+
+def _normalize_peptides(
+    psms: _PsmDataset, backend: _Optional[_Callable], **kwargs
+) -> _PsmDataset:
+    """
+    Normalize each value from `dataset.peptide_column`.
+
+    peptide_normalizer (dict; optional): A dict whose `backend` (a `callable`) will be called to
+        Any dict entries
+        other than `backend` will be passed to the callable as keyword arguments.
+    Parameters
+    ----------
+    psms: The dataset that will be normalized
+    backend: A callable that will be passed each peptide value, returning the normalized value.
+        If unspecified or `None` a generic normalizer will be used, which provides a "best-effort"
+        normalization to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). A false-y value will
+        disable normalization.
+        TODO: support a registry of available backend normalizers and permit `backend` to be a str
+    kwargs: Any keyword arguments will be passed to each invocation of `backend`.
+
+    Returns
+    -------
+    A PSM dataset with the `peptide_column` values normalized by the given backend.
+    """
+    raise NotImplementedError("TODO: implement peptide normalization")
