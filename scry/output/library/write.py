@@ -138,7 +138,9 @@ def write_library(
     else:
         assert not psms.data.isEmpty()
 
-    if peptide_normalizer:
+    if peptide_normalizer is None:
+        norm_psms = _normalize_peptides(psms)
+    elif peptide_normalizer:
         norm_psms = _normalize_peptides(psms, **peptide_normalizer)
     else:
         norm_psms = psms
@@ -304,7 +306,7 @@ def _normalize_peptide_heuristic(seq):
 
 
 def _normalize_peptides(
-    psms: _PsmDataset, backend: _Optional[_Callable], **kwargs
+    psms: _PsmDataset, backend: _Optional[_Callable] = None, **kwargs
 ) -> _PsmDataset:
     """
     Normalize each value from `dataset.peptide_column`.
