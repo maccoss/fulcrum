@@ -139,10 +139,18 @@ def write_library(
         assert not psms.data.isEmpty()
 
     if peptide_normalizer is None:
+        _logger.debug(
+            "Normalizing peptide sequences and mods with default normalizer"
+        )
         norm_psms = _normalize_peptides(psms)
     elif peptide_normalizer:
+        _logger.debug(
+            "Normalizing peptide sequences and mods with: %s",
+            peptide_normalizer,
+        )
         norm_psms = _normalize_peptides(psms, **peptide_normalizer)
     else:
+        _logger.debug("Skipping normalization of peptide sequences and mods")
         norm_psms = psms
 
     # 2. Join spectral info
