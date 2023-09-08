@@ -219,7 +219,7 @@ def test_normalize_peptides_unmod(request, dataset_fixture):
 
     # Filter to just peptides w/o mods
     dataset = dataset.with_data(
-        dataset.data.filter(~dataset.peptides.rlike("[\[\]\(\)]"))
+        dataset.data.filter(~dataset.peptides.rlike(r"[\[\]\(\)]"))
     )
 
     assert dataset.data.count() > 0
@@ -254,7 +254,7 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     dataset = dataset.with_data(
         dataset.data.filter(
             # Assumes EncyclopeDIA-formatted input
-            dataset.peptides.rlike("C\[(?:\+)?57|M\[(?:\+)?1[56]")
+            dataset.peptides.rlike(r"C\[(?:\+)?57|M\[(?:\+)?1[56]")
         )
     )
 
@@ -271,10 +271,10 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
         dataset.data.select(dataset.peptides)
         .toPandas()[dataset.peptide_column]
         .str.replace(
-            "(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(Unimod:4)", regex=True
+            r"(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(Unimod:4)", regex=True
         )
         .str.replace(
-            "(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(Unimod:35)", regex=True
+            r"(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(Unimod:35)", regex=True
         )
         .values,
         norm_psms.data.select(norm_psms.peptides)
