@@ -288,9 +288,9 @@ def _normalize_mod_heuristic(match: _re.Match) -> str:
     else:
         # Heuristic lookup
         if residue.upper() == "C" and round(delta) == 57:
-            return residue + "(Unimod:4)"
+            return residue + "(UniMod:4)"
         if residue.upper() == "M" and round(delta) == 16:
-            return residue + "(Unimod:35)"
+            return residue + "(UniMod:35)"
 
     # Give up; return the originally-captured (sub)string
     return match.group(0)

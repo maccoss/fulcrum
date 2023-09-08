@@ -271,10 +271,10 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
         dataset.data.select(dataset.peptides)
         .toPandas()[dataset.peptide_column]
         .str.replace(
-            r"(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(Unimod:4)", regex=True
+            r"(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(UniMod:4)", regex=True
         )
         .str.replace(
-            r"(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(Unimod:35)", regex=True
+            r"(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(UniMod:35)", regex=True
         )
         .values,
         norm_psms.data.select(norm_psms.peptides)
