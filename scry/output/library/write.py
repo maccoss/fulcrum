@@ -167,7 +167,7 @@ def write_library(
         dataset.spectrum_columns == spectra.spectrum_columns
     ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
 
-    joined_df: _DataFrame = dataset.data.alias("psms").join(
+    joined_df: _DataFrame = norm_psms.data.alias("psms").join(
         spectra.data.alias("spectra"), on=dataset.spectrum_columns
     )
 
