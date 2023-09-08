@@ -139,10 +139,18 @@ def write_library(
         assert not psms.data.isEmpty()
 
     if peptide_normalizer is None:
+        _logger.debug(
+            "Normalizing peptide sequences and mods with default normalizer"
+        )
         norm_psms = _normalize_peptides(psms)
     elif peptide_normalizer:
+        _logger.debug(
+            "Normalizing peptide sequences and mods with: %s",
+            peptide_normalizer,
+        )
         norm_psms = _normalize_peptides(psms, **peptide_normalizer)
     else:
+        _logger.debug("Skipping normalization of peptide sequences and mods")
         norm_psms = psms
 
     # 2. Join spectral info
@@ -159,7 +167,7 @@ def write_library(
         dataset.spectrum_columns == spectra.spectrum_columns
     ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
 
-    joined_df: _DataFrame = dataset.data.alias("psms").join(
+    joined_df: _DataFrame = norm_psms.data.alias("psms").join(
         spectra.data.alias("spectra"), on=dataset.spectrum_columns
     )
 

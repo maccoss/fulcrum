@@ -4,7 +4,8 @@ import pytest
 
 from numpy.testing import assert_array_equal
 
-from pyspark.sql.functions import array, col, lit, rand as _rand
+import pyspark.sql.functions as fns
+from pyspark.sql.functions import array, lit, rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
 from wheely.mammoth.parsers import read_encyclopedia_features
@@ -72,7 +73,7 @@ def spectra_backend() -> Callable:
             )
             .withColumn("__z", (rand(seed=0) * 4).astype("int"))
             .withColumn("__mz", rand(seed=1) * 600 + 400)
-            .withColumn("__rt", col("__mz") + rand(seed=2) * 200)
+            .withColumn("__rt", fns.col("__mz") + rand(seed=2) * 200)
             .withColumn(
                 "__peaklist",
                 array(
@@ -93,7 +94,7 @@ def spectra_backend() -> Callable:
 @pytest.mark.parametrize(
     "dataset_fixture", ["psm_dataset", "confidence_dataset"]
 )
-def test_create_library(request, dataset_fixture, spectra_backend):
+def test_write_library(request, dataset_fixture, spectra_backend):
     """
     Test that we can build a library DataFrame from our PSM and spectrum fixtures.
     """
@@ -122,6 +123,9 @@ def test_create_library(request, dataset_fixture, spectra_backend):
 
     for col in result.columns:
         assert not col.startswith("__"), f"Leaked internal column? {col}"
+
+    # Assume default sequence / modification normalization
+    assert result.filter(fns.col("ModifiedPeptide").rlike(r"\[")).isEmpty()
 
 
 def test_filter_psms_with_confidence_dataset(confidence_dataset):
@@ -155,7 +159,7 @@ def test_filter_psms_with_psm_dataset(psm_dataset):
 
     # Perform assertions (e.g., check if the filtered dataset contains the expected PSMs)
     assert psm_dataset.data.count() > filtered_dataset.data.count()
-    assert filtered_dataset.data.filter(~col(threshold_col)).isEmpty()
+    assert filtered_dataset.data.filter(~fns.col(threshold_col)).isEmpty()
 
 
 @pytest.mark.parametrize(
@@ -215,7 +219,7 @@ def test_normalize_peptides_unmod(request, dataset_fixture):
 
     # Filter to just peptides w/o mods
     dataset = dataset.with_data(
-        dataset.data.filter(~dataset.peptides.rlike("[\[\]\(\)]"))
+        dataset.data.filter(~dataset.peptides.rlike(r"[\[\]\(\)]"))
     )
 
     assert dataset.data.count() > 0
@@ -250,7 +254,7 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     dataset = dataset.with_data(
         dataset.data.filter(
             # Assumes EncyclopeDIA-formatted input
-            dataset.peptides.rlike("C\[(?:\+)?57|M\[(?:\+)?1[56]")
+            dataset.peptides.rlike(r"C\[(?:\+)?57|M\[(?:\+)?1[56]")
         )
     )
 
@@ -267,10 +271,10 @@ def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
         dataset.data.select(dataset.peptides)
         .toPandas()[dataset.peptide_column]
         .str.replace(
-            "(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(Unimod:4)", regex=True
+            r"(?<=C)\[(?:\+)?57(?:\.)?[0-9]*\]", "(Unimod:4)", regex=True
         )
         .str.replace(
-            "(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(Unimod:35)", regex=True
+            r"(?<=M)\[(?:\+)?1[56](?:\.)?[0-9]*\]", "(Unimod:35)", regex=True
         )
         .values,
         norm_psms.data.select(norm_psms.peptides)
