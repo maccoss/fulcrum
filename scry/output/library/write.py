@@ -258,6 +258,102 @@ def _filter_psms(
     return dataset.with_data(dataset.data.filter(threshold_col))
 
 
+_mod_heuristic_tbl = None
+
+
+def _get_mod_heuristic_tbl():
+    global _mod_heuristic_tbl
+    if _mod_heuristic_tbl is None:
+        _mod_heuristic_tbl_pattern = _re.compile(
+            r"\s*MOD\(\"([^\"]+)\",\s?(?:\(float\)\s*)?(\d*(?:\.\d*)?)\),?"
+        )  # TODO
+        _mod_heuristic_tbl = [
+            (m.group(1), float(m.group(2)))
+            for row in r"""
+            MOD("UniMod:4", (float)57.021464),
+            MOD("Carbamidomethyl (C)", (float)57.021464),
+            MOD("Carbamidomethyl", (float)57.021464),
+            MOD("CAM", (float)57.021464),
+            MOD("+57", (float)57.021464),
+            MOD("+57.0", (float)57.021464),
+            MOD("UniMod:26", (float)39.994915),
+            MOD("PCm", (float)39.994915),
+            MOD("UniMod:5", (float)43.005814),
+            MOD("Carbamylation (KR)", (float)43.005814),
+            MOD("+43", (float)43.005814),
+            MOD("+43.0", (float)43.005814),
+            MOD("CRM", (float)43.005814),
+            MOD("UniMod:7", (float)0.984016),
+            MOD("Deamidation (NQ)", (float)0.984016),
+            MOD("Deamidation", (float)0.984016),
+            MOD("Dea", (float)0.984016),
+            MOD("+1", (float)0.984016),
+            MOD("+1.0", (float)0.984016),
+            MOD("UniMod:35", (float)15.994915),
+            MOD("Oxidation (M)", (float)15.994915),
+            MOD("Oxidation", (float)15.994915),
+            MOD("Oxi", (float)15.994915),
+            MOD("+16", (float)15.994915),
+            MOD("+16.0", (float)15.994915),
+            MOD("Oxi", (float)15.994915),
+            MOD("UniMod:1", (float)42.010565),
+            MOD("Acetyl (Protein N-term)", (float)42.010565),
+            MOD("+42", (float)42.010565),
+            MOD("+42.0", (float)42.010565),
+            MOD("UniMod:255", (float)28.0313),
+            MOD("AAR", (float)28.0313),
+            MOD("UniMod:254", (float)26.01565),
+            MOD("AAS", (float)26.01565),
+            MOD("UniMod:122", (float)27.994915),
+            MOD("Frm", (float)27.994915),
+            MOD("UniMod:1301", (float)128.094963),
+            MOD("+1K", (float)128.094963),
+            MOD("UniMod:1288", (float)156.101111),
+            MOD("+1R", (float)156.101111),
+            MOD("UniMod:27", (float)-18.010565),
+            MOD("PGE", (float)-18.010565),
+            MOD("UniMod:28", (float)-17.026549),
+            MOD("PGQ", (float)-17.026549),
+            MOD("UniMod:526", (float)-48.003371),
+            MOD("DTM", (float)-48.003371),
+            MOD("UniMod:325", (float)31.989829),
+            MOD("2Ox", (float)31.989829),
+            MOD("UniMod:342", (float)15.010899),
+            MOD("Amn", (float)15.010899),
+            MOD("UniMod:1290", (float)114.042927),
+            MOD("2CM", (float)114.042927),
+            MOD("UniMod:359", (float)13.979265),
+            MOD("PGP", (float)13.979265),
+            MOD("UniMod:30", (float)21.981943),
+            MOD("NaX", (float)21.981943),
+            MOD("UniMod:401", (float)-2.015650),
+            MOD("-2H", (float)-2.015650),
+            MOD("UniMod:528", (float)14.999666),
+            MOD("MDe", (float)14.999666),
+            MOD("UniMod:385", (float)-17.026549),
+            MOD("dAm", (float)-17.026549),
+            MOD("UniMod:23", (float)-18.010565),
+            MOD("Dhy", (float)-18.010565),
+            MOD("UniMod:129", (float)125.896648),
+            MOD("Iod", (float)125.896648),
+            MOD("Phosphorylation (ST)", (float)79.966331),
+            MOD("UniMod:21", (float)79.966331),
+            MOD("+80", (float)79.966331),
+            MOD("+80.0", (float)79.966331),
+            MOD("UniMod:259", (float)8.014199, 1),
+            MOD("Lys8", (float)8.014199, 1),
+            MOD("UniMod:267", (float)10.008269, 1),
+            MOD("Arg10", (float)10.008269, 1),
+            MOD("UniMod:268", (float)6.013809, 1),
+            MOD("UniMod:269", (float)10.027228, 1)
+            """.splitlines(
+                keepends=False
+            )
+            if (m := _mod_heuristic_tbl_pattern.match(row))
+        ]
+    return _mod_heuristic_tbl
+
+
 #: Pattern used to find modifications that will be string-substituted
 _mod_heuristic_pattern = _re.compile(r"([A-Z])(\[.+?\]|\(.+?\))")
 
@@ -286,7 +382,14 @@ def _normalize_mod_heuristic(match: _re.Match) -> str:
         # Not a numeric mod; give up!
         pass
     else:
-        # Heuristic lookup
+        _tbl = _get_mod_heuristic_tbl()
+
+        closest = min(_tbl, key=lambda p: abs(delta - p[1]))
+        if round(delta) == round(closest[1]):
+            _logger.debug("Matched mod mass %s to %s", mod, closest)
+            return f"{residue}({closest[0]})"
+
+        # Heuristic lookup TODO: likely redundant
         if residue.upper() == "C" and round(delta) == 57:
             return residue + "(UniMod:4)"
         if residue.upper() == "M" and round(delta) == 16:
