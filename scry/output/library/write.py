@@ -25,11 +25,12 @@ from wheely.mammoth import (
 from wheely.mammoth.spectra import (
     SpectraDataset as _LibSpectra,
 )
+from wheely.mammoth.spectra.parsers.registry import (
+    get_backend as _get_spectra_backend,
+)
 from wheely.mammoth.spectra.utils import (
     peaklist_to_pairs as _peaklist_to_pairs,
 )
-
-from .spectra import get_backend as _get_spectra_backend
 
 _logger = _logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ import logging as _logging
 # be used like so -> from importlib.metadata import entry_points
 from importlib_metadata import entry_points
 
-from .existing import read_existing_results
+from scry.search.existing import read_existing_results
 
 _logger = _logging.getLogger(__name__)
 
