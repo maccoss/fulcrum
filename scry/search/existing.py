@@ -27,6 +27,7 @@ def read_existing_results(
     engine: _Union[str, _Callable[..., _PsmDataset]],
     location: _Union[str, _Iterable[str]],
     spark: _SparkSession = None,
+    **kwargs,
 ) -> _PsmDataset:
     """
     `read_existing_results`: read search results with `wheely-mammoth`
@@ -48,4 +49,4 @@ def read_existing_results(
     else:
         _engine = engine
 
-    return _engine(_listify(location), spark=spark)
+    return _engine(_listify(location), spark=spark, **kwargs)
