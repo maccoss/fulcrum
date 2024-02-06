@@ -1,6 +1,7 @@
 """
 `scry.output.confidence`: output implementations for confidence results
 """
+
 from wheely.mammoth import ConfidenceDataset as _ConfidenceDataset
 
 

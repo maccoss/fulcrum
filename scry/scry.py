@@ -1,6 +1,7 @@
 """
 `scry.scry`: this module contains the main entry point for Scry workflows
 """
+
 from typing import Callable as _Callable, Union as _Union
 from pyspark.sql import SparkSession as _SparkSession
 
