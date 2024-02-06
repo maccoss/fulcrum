@@ -9,7 +9,11 @@ from pyspark.sql.functions import array, lit, rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
 from wheely.mammoth.parsers import read_encyclopedia_features
-from wheely.mammoth.spectra import SpectraDataset, PeaklistType
+from wheely.mammoth.spectra import (
+    SpectraDataset,
+    SpectraDatasetBase,
+    PeaklistType,
+)
 
 from scry.output.library import write_library
 from scry.output.library.write import (
@@ -67,7 +71,7 @@ def spectra_backend() -> Callable:
         """
         Returns fake spectra for each input PSM.
         """
-        return SpectraDataset(
+        return SpectraDatasetBase(
             psms.data.select(
                 *psms.spectrum_columns,
             )
