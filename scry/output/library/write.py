@@ -163,8 +163,14 @@ def write_library(
             norm_psms, _SpectraDataset
         ), "Normalized dataset is no longer a SpectraDataset!!"
 
-        spectra = norm_psms
         joined_df = norm_psms.data
+
+        peptide_col = norm_psms.peptide_column
+
+        charge_col = norm_psms.charge_column
+        mz_col = norm_psms.mz_column
+        rt_col = norm_psms.rt_column
+        peaklist_col = norm_psms.peaklist_column
     else:
         spectra: _SpectraDataset = _spectra_backend(norm_psms, **kwargs)
 
@@ -183,6 +189,13 @@ def write_library(
             spectra.data.alias("spectra"), on=dataset.spectrum_columns
         )
 
+        peptide_col = f"psms.{norm_psms.peptide_column}"
+
+        charge_col = f"spectra.{spectra.charge_column}"
+        mz_col = f"spectra.{spectra.mz_column}"
+        rt_col = f"spectra.{spectra.rt_column}"
+        peaklist_col = f"spectra.{spectra.peaklist_column}"
+
     if _logger.isEnabledFor(_logging.INFO):
         n_join = joined_df.count()
         _logger.info("Will write %d PSMs to library (after join)", n_join)
@@ -191,20 +204,16 @@ def write_library(
         assert not joined_df.isEmpty()
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
-    peak = _peaklist_to_pairs(
-        _fns.col("spectra." + spectra.peaklist_column)
-    ).alias("__peak")
+    peak = _peaklist_to_pairs(_fns.col(peaklist_col)).alias("__peak")
 
     # 3. Build, name, and select columns
     output = (
         joined_df.select(
             # TODO: clarify / document this use of `peptide_column`
-            _fns.col("psms." + psms.peptide_column).alias("ModifiedPeptide"),
-            _fns.col("spectra." + spectra.charge_column).alias(
-                "PrecursorCharge"
-            ),
-            _fns.col("spectra." + spectra.mz_column).alias("PrecursorMz"),
-            _fns.col("spectra." + spectra.rt_column).alias("Tr_recalibrated"),
+            _fns.col(peptide_col).alias("ModifiedPeptide"),
+            _fns.col(charge_col).alias("PrecursorCharge"),
+            _fns.col(mz_col).alias("PrecursorMz"),
+            _fns.col(rt_col).alias("Tr_recalibrated"),
             # We must select this up front, it will be aliased into the correct position below
             *(
                 [_fns.col("psms." + dataset.qvalue_column).alias("__qvalue")]
