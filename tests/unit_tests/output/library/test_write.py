@@ -30,6 +30,19 @@ def rand(seed=0):
 
 
 @pytest.fixture
+def psm_dataset() -> PsmDataset:
+    # Create a PsmDataset fixture
+    dataset = read_encyclopedia_features(
+        "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
+    )
+
+    assert dataset.peptide_column in dataset.columns
+    assert not [c for c in dataset.columns if c not in dataset.data.columns]
+
+    return dataset
+
+
+@pytest.fixture
 def confidence_dataset(psm_dataset) -> ConfidenceDataset:
     # Create a ConfidenceDataset fixture
     dataset = ConfidenceDataset(
@@ -47,16 +60,93 @@ def confidence_dataset(psm_dataset) -> ConfidenceDataset:
         dataset.data.groupBy(dataset.targets).count().toPandas()["count"] > 0
     )
 
-    yield dataset
+    return dataset
 
 
 @pytest.fixture
-def psm_dataset() -> PsmDataset:
-    # Create a PsmDataset fixture
-    dataset = read_encyclopedia_features(
-        "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
+def spectra_dataset(psm_dataset) -> SpectraDataset:
+    class PsmSpectraDataset(PsmDataset, SpectraDatasetBase):
+        def __init__(
+            self,
+            psms,
+            score_columns,
+            spectrum_columns,
+            target_column,
+            peptide_column,
+            protein_column,
+            protein_delim,
+            charge_column,
+            mz_column,
+            rt_column,
+            peaklist_column,
+        ):
+            PsmDataset.__init__(
+                self,
+                psms,
+                score_columns=score_columns,
+                spectrum_columns=spectrum_columns,
+                target_column=target_column,
+                peptide_column=peptide_column,
+                protein_column=protein_column,
+                protein_delim=protein_delim,
+            )
+            SpectraDatasetBase.__init__(
+                self,
+                psms,
+                spectrum_columns=spectrum_columns,
+                charge_column=charge_column,
+                mz_column=mz_column,
+                rt_column=rt_column,
+                peaklist_column=peaklist_column,
+            )
+
+        def with_data(self, data, **kwargs):
+            return PsmSpectraDataset(
+                data,
+                **dict(
+                    dict(
+                        score_columns=self.score_columns,
+                        spectrum_columns=self.spectrum_columns,
+                        target_column=self.target_column,
+                        peptide_column=self.peptide_column,
+                        protein_column=self.protein_column,
+                        protein_delim=self.protein_delim,
+                        charge_column=self.charge_column,
+                        mz_column=self.mz_column,
+                        rt_column=self.rt_column,
+                        peaklist_column=self.peaklist_column,
+                    ),
+                    **kwargs,
+                ),
+            )
+
+    dataset = PsmSpectraDataset(
+        psm_dataset.data.withColumn("__z", (rand(seed=0) * 4).astype("int"))
+        .withColumn("__mz", rand(seed=1) * 600 + 400)
+        .withColumn("__rt", fns.col("__mz") + rand(seed=2) * 200)
+        .withColumn(
+            "__peaklist",
+            array(
+                array(lit(1234.567890), lit(0.67)),
+                array(lit(123.456789), lit(0.33)),
+            ).astype(PeaklistType),
+        ),
+        target_column=psm_dataset.target_column,
+        score_columns=psm_dataset.score_columns,
+        spectrum_columns=psm_dataset.spectrum_columns,
+        peptide_column=psm_dataset.peptide_column,
+        protein_column=psm_dataset.protein_column,
+        protein_delim=psm_dataset.protein_delim,
+        charge_column="__z",
+        mz_column="__mz",
+        rt_column="__rt",
+        peaklist_column="__peaklist",
     )
-    yield dataset
+
+    assert dataset.peptide_column in dataset.columns
+    assert not [c for c in dataset.columns if c not in dataset.data.columns]
+
+    return dataset
 
 
 @pytest.fixture
@@ -132,6 +222,39 @@ def test_write_library(request, dataset_fixture, spectra_backend):
     assert result.filter(fns.col("ModifiedPeptide").rlike(r"\[")).isEmpty()
 
 
+def _always_throw(*args, **kwargs):
+    assert False, "This function should not be invoked!!"
+
+
+@pytest.mark.parametrize("spectra_backend", [None, _always_throw])
+def test_write_library_spectradataset(spectra_dataset, spectra_backend):
+    """
+    Test that we can build a library DataFrame from our PSM and spectrum fixtures.
+    """
+    result = write_library(spectra_dataset, output_location=None)
+
+    # Check that the result has at least one peak per spectrum
+    assert result.count() >= spectra_dataset.data.count()
+
+    # Check for expected columns
+    for col in [
+        "ModifiedPeptide",
+        "PrecursorCharge",
+        "PrecursorMz",
+        "ProductMz",
+    ]:
+        assert col in result.columns
+
+    if isinstance(spectra_dataset, ConfidenceDataset):
+        assert "QValue" in result.columns
+
+    for col in result.columns:
+        assert not col.startswith("__"), f"Leaked internal column? {col}"
+
+    # Assume default sequence / modification normalization
+    assert result.filter(fns.col("ModifiedPeptide").rlike(r"\[")).isEmpty()
+
+
 def test_filter_psms_with_confidence_dataset(confidence_dataset):
     # Test data
     threshold_col = None
@@ -167,7 +290,7 @@ def test_filter_psms_with_psm_dataset(psm_dataset):
 
 
 @pytest.mark.parametrize(
-    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+    "dataset_fixture", ["psm_dataset", "confidence_dataset", "spectra_dataset"]
 )
 def test_filter_psms_no_filtering(request, dataset_fixture):
     """
@@ -187,7 +310,7 @@ def test_filter_psms_no_filtering(request, dataset_fixture):
 
 
 @pytest.mark.parametrize(
-    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+    "dataset_fixture", ["psm_dataset", "confidence_dataset", "spectra_dataset"]
 )
 def test_normalize_peptides_noop(request, dataset_fixture):
     """
@@ -212,7 +335,7 @@ def test_normalize_peptides_noop(request, dataset_fixture):
 
 
 @pytest.mark.parametrize(
-    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+    "dataset_fixture", ["psm_dataset", "confidence_dataset", "spectra_dataset"]
 )
 def test_normalize_peptides_unmod(request, dataset_fixture):
     """
@@ -245,7 +368,7 @@ def test_normalize_peptides_unmod(request, dataset_fixture):
 
 
 @pytest.mark.parametrize(
-    "dataset_fixture", ["psm_dataset", "confidence_dataset"]
+    "dataset_fixture", ["psm_dataset", "confidence_dataset", "spectra_dataset"]
 )
 def test_normalize_peptides_carbamid_metox(request, dataset_fixture):
     """
