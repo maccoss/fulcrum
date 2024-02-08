@@ -23,7 +23,7 @@ from wheely.mammoth import (
     ConfidenceDataset as _ConfidenceDataset,
 )
 from wheely.mammoth.spectra import (
-    SpectraDataset as _LibSpectra,
+    SpectraDataset as _SpectraDataset,
 )
 from wheely.mammoth.spectra.parsers.registry import (
     get_backend as _get_spectra_backend,
@@ -37,12 +37,12 @@ _logger = _logging.getLogger(__name__)
 
 def write_library(
     dataset: _PsmDataset,
-    spectra_backend: _Union[str, _Callable],
     location: _Optional[str] = None,
-    output_location: _Optional[str] = None,
+    spectra_backend: _Union[str, _Callable] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
     peptide_normalizer: _Optional[_Dict[str, _Any]] = None,
+    output_location: _Optional[str] = None,
     **kwargs,
 ) -> _DataFrame:
     """
@@ -57,6 +57,7 @@ def write_library(
     may not necessarily include the necessary spectral information for creating a library.
     Retrieval of this information is implemented by a pluggable backend implementation capable of
     fetching the precursor- and fragment-level spectral information for PSMs in a filtered dataset.
+    This is not required if `dataset` implements `SpectraDataset`.
 
     Output -- Libraries are written in a TSV format compatible with DIA-NN and EncyclopeDIA, and
     suitable for conversion to other formats using existing tools. For more information see
@@ -120,14 +121,16 @@ def write_library(
     if not location:
         location = output_location
 
-    if not spectra_backend:
-        raise ValueError("spectra_backend may not be None!")
-
     _spectra_backend: _Callable
-    if callable(spectra_backend):
-        _spectra_backend = spectra_backend
-    else:
-        _spectra_backend = _get_spectra_backend(spectra_backend)
+    if not isinstance(dataset, _SpectraDataset):
+        # Fail-fast if a spectral backend is required but not provided
+        if not spectra_backend:
+            raise ValueError("spectra_backend may not be None!")
+
+        if callable(spectra_backend):
+            _spectra_backend = spectra_backend
+        else:
+            _spectra_backend = _get_spectra_backend(spectra_backend)
 
     # 1. Filter / normalize
     psms = _filter_psms(dataset, threshold_col, qval_thresh)
@@ -154,23 +157,45 @@ def write_library(
         _logger.debug("Skipping normalization of peptide sequences and mods")
         norm_psms = psms
 
-    # 2. Join spectral info
-    spectra: _LibSpectra = _spectra_backend(norm_psms, **kwargs)
+    # 2. Join spectral info (if necessary)
+    joined_df: _DataFrame
+    if isinstance(dataset, _SpectraDataset):
+        assert isinstance(
+            norm_psms, _SpectraDataset
+        ), "Normalized dataset is no longer a SpectraDataset!!"
 
-    if _logger.isEnabledFor(_logging.INFO):
-        n_spec = spectra.data.count()
-        _logger.info("Found %d spectra", n_spec)
-        assert n_spec > 0
+        joined_df = norm_psms.data
+
+        peptide_col = norm_psms.peptide_column
+
+        charge_col = norm_psms.charge_column
+        mz_col = norm_psms.mz_column
+        rt_col = norm_psms.rt_column
+        peaklist_col = norm_psms.peaklist_column
     else:
-        assert not spectra.data.isEmpty()
+        spectra: _SpectraDataset = _spectra_backend(norm_psms, **kwargs)
 
-    assert (
-        dataset.spectrum_columns == spectra.spectrum_columns
-    ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
+        if _logger.isEnabledFor(_logging.INFO):
+            n_spec = spectra.data.count()
+            _logger.info("Found %d spectra", n_spec)
+            assert n_spec > 0
+        else:
+            assert not spectra.data.isEmpty()
 
-    joined_df: _DataFrame = norm_psms.data.alias("psms").join(
-        spectra.data.alias("spectra"), on=dataset.spectrum_columns
-    )
+        assert (
+            dataset.spectrum_columns == spectra.spectrum_columns
+        ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
+
+        joined_df = norm_psms.data.alias("psms").join(
+            spectra.data.alias("spectra"), on=dataset.spectrum_columns
+        )
+
+        peptide_col = f"psms.{norm_psms.peptide_column}"
+
+        charge_col = f"spectra.{spectra.charge_column}"
+        mz_col = f"spectra.{spectra.mz_column}"
+        rt_col = f"spectra.{spectra.rt_column}"
+        peaklist_col = f"spectra.{spectra.peaklist_column}"
 
     if _logger.isEnabledFor(_logging.INFO):
         n_join = joined_df.count()
@@ -180,20 +205,16 @@ def write_library(
         assert not joined_df.isEmpty()
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
-    peak = _peaklist_to_pairs(
-        _fns.col("spectra." + spectra.peaklist_column)
-    ).alias("__peak")
+    peak = _peaklist_to_pairs(_fns.col(peaklist_col)).alias("__peak")
 
     # 3. Build, name, and select columns
     output = (
         joined_df.select(
             # TODO: clarify / document this use of `peptide_column`
-            _fns.col("psms." + psms.peptide_column).alias("ModifiedPeptide"),
-            _fns.col("spectra." + spectra.charge_column).alias(
-                "PrecursorCharge"
-            ),
-            _fns.col("spectra." + spectra.mz_column).alias("PrecursorMz"),
-            _fns.col("spectra." + spectra.rt_column).alias("Tr_recalibrated"),
+            _fns.col(peptide_col).alias("ModifiedPeptide"),
+            _fns.col(charge_col).alias("PrecursorCharge"),
+            _fns.col(mz_col).alias("PrecursorMz"),
+            _fns.col(rt_col).alias("Tr_recalibrated"),
             # We must select this up front, it will be aliased into the correct position below
             *(
                 [_fns.col("psms." + dataset.qvalue_column).alias("__qvalue")]
@@ -446,6 +467,10 @@ def _normalize_peptides(
         return psms
 
     assert callable(_backend)
+
+    assert (
+        psms.peptide_column in psms.data.columns
+    ), f"Did not find peptide column `{psms.peptide_column}`"
 
     orig_pep_col = "__peptide_orig"
     return psms.with_data(
