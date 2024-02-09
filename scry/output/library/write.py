@@ -172,6 +172,11 @@ def write_library(
         mz_col = norm_psms.mz_column
         rt_col = norm_psms.rt_column
         peaklist_col = norm_psms.peaklist_column
+
+        if _logger.isEnabledFor(_logging.INFO):
+            n_rows = joined_df.count()
+            _logger.info("Will write %d entries to library", n_rows)
+            assert n_rows > 0
     else:
         spectra: _SpectraDataset = _spectra_backend(norm_psms, **kwargs)
 
@@ -197,12 +202,12 @@ def write_library(
         rt_col = f"spectra.{spectra.rt_column}"
         peaklist_col = f"spectra.{spectra.peaklist_column}"
 
-    if _logger.isEnabledFor(_logging.INFO):
-        n_join = joined_df.count()
-        _logger.info("Will write %d PSMs to library (after join)", n_join)
-        assert n_join > 0
-    else:
-        assert not joined_df.isEmpty()
+        if _logger.isEnabledFor(_logging.INFO):
+            n_rows = joined_df.count()
+            _logger.info(
+                "Will write %d entries to library (after join)", n_rows
+            )
+            assert n_rows > 0
 
     # Selecting this "explodes" the peaklist into one row per fragment peak
     peak = _peaklist_to_pairs(_fns.col(peaklist_col)).alias("__peak")
@@ -271,10 +276,16 @@ def _filter_psms(
                     dataset.data.filter(dataset.qvalues <= qval_thresh)
                 )
             else:
-                # Fall through
-                pass
+                # No filtering possible
+                _logger.warning(
+                    "No `qval_thresh` or `threshold_col` is set for `write_library`! The library will be written without filtering"
+                )
+                return dataset
 
         # No filtering possible
+        _logger.warning(
+            "No `threshold_col` is set for `write_library`! The library will be written without filtering"
+        )
         return dataset
 
     return dataset.with_data(dataset.data.filter(threshold_col))
