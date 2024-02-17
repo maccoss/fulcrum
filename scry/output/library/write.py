@@ -217,7 +217,7 @@ def write_library(
         joined_df.select(
             # TODO: clarify / document this use of `peptide_column`
             _fns.col(peptide_col).alias("ModifiedPeptide"),
-            _fns.col(charge_col).alias("PrecursorCharge"),
+            _fns.col(charge_col).cast("integer").alias("PrecursorCharge"),
             _fns.col(mz_col).alias("PrecursorMz"),
             _fns.col(rt_col).alias("Tr_recalibrated"),
             # We must select this up front, it will be aliased into the correct position below
