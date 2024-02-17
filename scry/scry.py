@@ -3,6 +3,8 @@
 """
 
 from typing import Callable as _Callable, Union as _Union
+import logging as _logging
+
 from pyspark.sql import SparkSession as _SparkSession
 
 from wheely.mammoth import (
@@ -10,6 +12,8 @@ from wheely.mammoth import (
 )
 
 from .workflow import workflows as _workflows
+
+_logger = _logging.getLogger(__name__)
 
 
 def scry(
@@ -30,6 +34,17 @@ def scry(
     """
     if not callable(workflow):
         workflow = _workflows[workflow]
+
+    if spark is None:
+        _builder = _SparkSession.builder.master("local")
+
+        _conf = kwargs.pop("spark_config", {})
+        _logger.info("Creating SparkSession with config %s", _conf)
+
+        for k, v in _conf.items():
+            _builder = _builder.config(k, v)
+
+        spark = _builder.getOrCreate()
 
     result = workflow(spark=spark, **kwargs)
 
