@@ -249,12 +249,11 @@ def write_library(
     if location:
         # Repartition to get a single TSV file; this will still produce
         # an output folder with Spark metadata.
-        # TODO: consider using .toPandas() and writing to the location as a single file, given we're assuming it's small enough for one file anyway
-        output.repartition(1).write.csv(
-            location,
-            sep="\t",
-            header=True,
-        )
+        if location.startswith("/mnt/"):
+            location = f"/dbfs{location}"
+
+        with open(location, "w") as out:
+            output.toPandas().to_csv(out, sep="\t", header=True, quoting=None)
 
     # 5. Return
     return output
