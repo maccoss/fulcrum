@@ -5,6 +5,7 @@
 import logging as _logging
 import re as _re
 from typing import (
+    cast as _cast,
     Any as _Any,
     Callable as _Callable,
     Dict as _Dict,
@@ -12,6 +13,7 @@ from typing import (
     Union as _Union,
 )
 
+import pandas as _pd
 from pyspark.sql import (
     Column as _Column,
     DataFrame as _DataFrame,
@@ -252,8 +254,11 @@ def write_library(
         if location.startswith("/mnt/"):
             location = f"/dbfs{location}"
 
+        # Cast to avoid warning from mypy
+        df: _pd.DataFrame = _cast(_pd.DataFrame, output.toPandas())
+
         with open(location, "w") as out:
-            output.toPandas().to_csv(out, sep="\t", header=True, quoting=None)
+            df.to_csv(out, sep="\t", header=True, quoting=None)
 
     # 5. Return
     return output
