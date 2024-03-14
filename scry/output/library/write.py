@@ -5,6 +5,7 @@
 import logging as _logging
 import re as _re
 from typing import (
+    cast as _cast,
     Any as _Any,
     Callable as _Callable,
     Dict as _Dict,
@@ -12,6 +13,8 @@ from typing import (
     Union as _Union,
 )
 
+import csv as _csv
+import pandas as _pd
 from pyspark.sql import (
     Column as _Column,
     DataFrame as _DataFrame,
@@ -249,12 +252,14 @@ def write_library(
     if location:
         # Repartition to get a single TSV file; this will still produce
         # an output folder with Spark metadata.
-        # TODO: consider using .toPandas() and writing to the location as a single file, given we're assuming it's small enough for one file anyway
-        output.repartition(1).write.csv(
-            location,
-            sep="\t",
-            header=True,
-        )
+        if location.startswith("/mnt/"):
+            location = f"/dbfs{location}"
+
+        # Cast to avoid warning from mypy
+        df: _pd.DataFrame = _cast(_pd.DataFrame, output.toPandas())
+
+        with open(location, "w") as out:
+            df.to_csv(out, sep="\t", header=True, quoting=_csv.QUOTE_NONE)
 
     # 5. Return
     return output
