@@ -44,6 +44,7 @@ def write_library(
     spectra_backend: _Union[str, _Callable] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
+    include_decoys: bool = False,
     peptide_normalizer: _Optional[_Dict[str, _Any]] = None,
     output_location: _Optional[str] = None,
     **kwargs,
@@ -109,6 +110,8 @@ def write_library(
         rows will be included in the resulting library.
     qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
         the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
+    include_decoys (bool; default = False): If true, include decoy PSMs in the library. Ignored
+        if `threshold_col` is specified.
     peptide_normalizer (dict; optional): A dict whose `backend` (a `callable`) will be called to
         normalize each `ModifiedPeptide` value (from `dataset.peptide_column`). Any dict entries
         other than `backend` will be passed to the callable as keyword arguments. If unspecified
@@ -136,7 +139,7 @@ def write_library(
             _spectra_backend = _get_spectra_backend(spectra_backend)
 
     # 1. Filter / normalize
-    psms = _filter_psms(dataset, threshold_col, qval_thresh)
+    psms = _filter_psms(dataset, threshold_col, qval_thresh, include_decoys)
 
     if _logger.isEnabledFor(_logging.INFO):
         n_filt = psms.data.count()
@@ -269,6 +272,7 @@ def _filter_psms(
     dataset: _PsmDataset,
     threshold_col: _Optional[_Union[str, _Column]],
     qval_thresh: _Optional[float],
+    include_decoys: _Optional[bool],
 ) -> _PsmDataset:
     """
     Return a dataset containing only filtered PSMs, according to the logic described above.
@@ -277,22 +281,42 @@ def _filter_psms(
     if threshold_col is None:
         if isinstance(dataset, _ConfidenceDataset):
             if qval_thresh is not None:
+                _logger.info(
+                    "Creating library with q-value threshold %f and decoys %scluded",
+                    qval_thresh,
+                    "in" if include_decoys else "ex",
+                )
+
                 return dataset.with_data(
-                    dataset.data.filter(dataset.qvalues <= qval_thresh)
+                    dataset.data.filter(
+                        (dataset.qvalues <= qval_thresh)
+                        & (dataset.targets | _fns.lit(include_decoys))
+                    )
                 )
             else:
                 # No filtering possible
                 _logger.warning(
-                    "No `qval_thresh` or `threshold_col` is set for `write_library`! The library will be written without filtering"
+                    "No `qval_thresh` or `threshold_col` is set for `write_library`! The library will be unfiltered, with decoys %scluded",
+                    "in" if include_decoys else "ex",
                 )
-                return dataset
+                return dataset.with_data(
+                    dataset.data.filter(
+                        dataset.targets | _fns.lit(include_decoys)
+                    )
+                )
 
         # No filtering possible
         _logger.warning(
-            "No `threshold_col` is set for `write_library`! The library will be written without filtering"
+            "No `threshold_col` is set for `write_library`! The library will be unfiltered, with decoys %scluded",
+            "in" if include_decoys else "ex",
         )
         return dataset
 
+    _logger.info(
+        "Creating library with threshold: %s",
+        _fns.col(threshold_col).name,
+        "in" if include_decoys else "ex",
+    )
     return dataset.with_data(dataset.data.filter(threshold_col))
 
 
