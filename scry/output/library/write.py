@@ -314,7 +314,7 @@ def _filter_psms(
 
     _logger.info(
         "Creating library with threshold: %s",
-        _fns.col(threshold_col).name,
+        threshold_col,
         "in" if include_decoys else "ex",
     )
     return dataset.with_data(dataset.data.filter(threshold_col))
