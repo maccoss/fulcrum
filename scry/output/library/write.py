@@ -262,7 +262,13 @@ def write_library(
         df: _pd.DataFrame = _cast(_pd.DataFrame, output.toPandas())
 
         with open(location, "w") as out:
-            df.to_csv(out, sep="\t", header=True, quoting=_csv.QUOTE_NONE)
+            df.to_csv(
+                out,
+                sep="\t",
+                header=True,
+                index=False,
+                quoting=_csv.QUOTE_NONE,
+            )
 
     # 5. Return
     return output
