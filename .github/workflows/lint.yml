@@ -14,7 +14,7 @@ jobs:
           pip config unset global.index-url || true  # Ensure we don't have old CodeArtifact creds in pip config
           pip install 'awscli>=1.18.83'
           aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
-          pip install '.[dev,toml]'
+          pip install '.[dev]'
       - uses: psf/black@stable
       - name: mypy
         uses: tsuyoshicho/action-mypy@v3.9.3
