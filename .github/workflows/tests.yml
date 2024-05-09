@@ -31,7 +31,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 wheel 'awscli>=1.18.83'
         aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
-        pip install .[dev,toml]  # dev for testing; also test toml support
+        pip install .[dev]  # dev for testing; also test toml support
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
