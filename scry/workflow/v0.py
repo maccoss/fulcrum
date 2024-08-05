@@ -143,12 +143,17 @@ def scry_v0(
         rescored is not None and rescored.data.count() > 0
     ), "Did not get any rescored PSMs!"
 
-    # assume the first score is the rescored one
-    score_name = next(iter(rescored.score_columns))
+    # Allow mutation
+    cortado = cortado.copy()
+
+    # If unspecified, assume the first score is the rescored one
+    score_name = cortado.pop("score_column", next(iter(rescored.score_columns)))
+    desc = cortado.pop("desc", False)
 
     _logger.info(
-        'Assigning confidence across the dataset using "%s" (ascending)',
+        'Assigning confidence across the dataset using "%s" (%sscending)',
         score_name,
+            "as" if not desc else "des"
     )
 
     conf_start = _time()
@@ -156,7 +161,7 @@ def scry_v0(
     conf = _assign_confidence(
         rescored,
         score_column=score_name,
-        desc=False,  # just assume rescoring gives an increasing score
+        desc=desc,
         **cortado,
     )
 
