@@ -147,13 +147,15 @@ def scry_v0(
     cortado = cortado.copy()
 
     # If unspecified, assume the first score is the rescored one
-    score_name = cortado.pop("score_column", next(iter(rescored.score_columns)))
+    score_name = cortado.pop(
+        "score_column", next(iter(rescored.score_columns))
+    )
     desc = cortado.pop("desc", False)
 
     _logger.info(
         'Assigning confidence across the dataset using "%s" (%sscending)',
         score_name,
-            "as" if not desc else "des"
+        "as" if not desc else "des",
     )
 
     conf_start = _time()
