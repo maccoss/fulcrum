@@ -131,7 +131,7 @@ def scry_v0(
     _logger.info(
         'Assigning confidence across the dataset using "%s" (%sscending)',
         score_name,
-        "as" if not desc else "des",
+        "a" if not desc else "de",
     )
 
     conf_start = _time()
