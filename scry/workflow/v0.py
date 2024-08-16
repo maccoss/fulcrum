@@ -108,36 +108,12 @@ def scry_v0(
     _logger.info("Built rescoring model in %.02f sec", model_end - model_start)
 
     rescored: _PsmDataset
-    if "subset_size" in airpot and psms.data.count() > int(
-        airpot.pop("subset_size")
-    ):
-        # The user requested that airpot train on only a subset of the PSMs
-        # so we will need to rescore them.
-
-        score_start = _time()
-
-        rescoring_result: _RescoringResult = _brew(
-            psms,
-            model=model,
-            **airpot,  # we've popped subset_size out of this dict
-        )
-
-        score_end = _time()
-
-        rescored = rescoring_result.psms
-
-        _logger.info(
-            "Rescored %d PSMs in %.02f sec",
-            rescored.data.count(),
-            score_end - score_start,
-        )
-    else:
-        try:
-            rescored = model.psms
-        except (AttributeError, KeyError) as e:
-            raise TypeError(
-                "Expected a RescoringResult, got " + type(model)
-            ) from e
+    try:
+        rescored = model.psms
+    except (AttributeError, KeyError) as e:
+        raise TypeError(
+            "Expected a RescoringResult, got " + type(model)
+        ) from e
 
     assert (
         rescored is not None and rescored.data.count() > 0
