@@ -35,6 +35,8 @@ from wheely.mammoth.spectra.utils import (
     peaklist_to_pairs as _peaklist_to_pairs,
 )
 
+from scry.output.util import filter_psms
+
 _logger = _logging.getLogger(__name__)
 
 
@@ -55,7 +57,9 @@ def write_library(
     Filtering -- If the optional `threshold_col` parameter is provided, only rows where this column
     is `True` will be included in the output. If `threshold_col` is not specified but the dataset is
     a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
-    PSMs. Otherwise all PSMs in the dataset will be included in the output.
+    PSMs. Otherwise all target PSMs in the dataset will be included in the output. To include decoys
+    in the output, pass `include_decoys=True` (note: `include_decoys` is ignored if `threshold_col`
+    is specified).
 
     Spectral information -- This module is meant to consume scored and filtered sets of PSMs, that
     may not necessarily include the necessary spectral information for creating a library.
@@ -139,7 +143,7 @@ def write_library(
             _spectra_backend = _get_spectra_backend(spectra_backend)
 
     # 1. Filter / normalize
-    psms = _filter_psms(dataset, threshold_col, qval_thresh, include_decoys)
+    psms = filter_psms(dataset, threshold_col, qval_thresh, include_decoys)
 
     if _logger.isEnabledFor(_logging.INFO):
         n_filt = psms.data.count()
@@ -272,58 +276,6 @@ def write_library(
 
     # 5. Return
     return output
-
-
-def _filter_psms(
-    dataset: _PsmDataset,
-    threshold_col: _Optional[_Union[str, _Column]],
-    qval_thresh: _Optional[float],
-    include_decoys: _Optional[bool],
-) -> _PsmDataset:
-    """
-    Return a dataset containing only filtered PSMs, according to the logic described above.
-    """
-
-    if threshold_col is None:
-        if isinstance(dataset, _ConfidenceDataset):
-            if qval_thresh is not None:
-                _logger.info(
-                    "Creating library with q-value threshold %f and decoys %scluded",
-                    qval_thresh,
-                    "in" if include_decoys else "ex",
-                )
-
-                return dataset.with_data(
-                    dataset.data.filter(
-                        (dataset.qvalues <= qval_thresh)
-                        & (dataset.targets | _fns.lit(include_decoys))
-                    )
-                )
-            else:
-                # No filtering possible
-                _logger.warning(
-                    "No `qval_thresh` or `threshold_col` is set for `write_library`! The library will be unfiltered, with decoys %scluded",
-                    "in" if include_decoys else "ex",
-                )
-                return dataset.with_data(
-                    dataset.data.filter(
-                        dataset.targets | _fns.lit(include_decoys)
-                    )
-                )
-
-        # No filtering possible
-        _logger.warning(
-            "No `threshold_col` is set for `write_library`! The library will be unfiltered, with decoys %scluded",
-            "in" if include_decoys else "ex",
-        )
-        return dataset
-
-    _logger.info(
-        "Creating library with threshold: %s",
-        threshold_col,
-        "in" if include_decoys else "ex",
-    )
-    return dataset.with_data(dataset.data.filter(threshold_col))
 
 
 _mod_heuristic_tbl = None
