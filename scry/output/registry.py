@@ -8,7 +8,7 @@ import logging as _logging
 # be used like so -> from importlib.metadata import entry_points
 from importlib_metadata import entry_points
 
-from .confidence import write_csv
+from .basic import write_csv
 from .library import write_library
 
 _logger = _logging.getLogger(__name__)
