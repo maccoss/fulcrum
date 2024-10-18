@@ -15,7 +15,7 @@ jobs:
           pip install 'awscli>=1.18.83'
           aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
           pip install '.[dev]'
-      - uses: psf/black@stable
+      - uses: psf/black@24.8.0  # last release that supports 3.8 
       - name: mypy
         uses: tsuyoshicho/action-mypy@v3.9.3
         with:
