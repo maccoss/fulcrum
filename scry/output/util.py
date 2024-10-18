@@ -32,7 +32,7 @@ def filter_psms(
         The dataset to write
     threshold_col (str | pyspark.sql.Column; optional): A column (or its name) specifying which
         rows will be included in the resulting library.
-    qval_thresh (float; default = 0.01): The largest _q_-value accepted into the library. Ignored if
+    qval_thresh (float): The largest _q_-value accepted into the library. Ignored if
         the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
     include_decoys (bool; default = False): If true, include decoy PSMs in the library. Ignored
         if `threshold_col` is specified.
