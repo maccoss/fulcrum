@@ -28,7 +28,7 @@ def quantify_basic(
     intensity_column: str,
 ) -> PsmIntensityDataset:
     """
-    Basic quantification backend -- just use the specified columns. If `dset` ontac
+    Basic quantification backend -- just use the specified columns.
 
     Parameters
     ----------
@@ -41,6 +41,8 @@ def quantify_basic(
     Returns
     -------
     out : PsmIntensityDataset
+        A dataset with the specified columns annotated. If `dset` is a `ConfidenceDataset` then the result will
+        be a `ProteinIntensityConfidenceDataset`.
     """
     kwargs = dict(
         sample_column=sample_column,
