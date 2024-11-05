@@ -5,6 +5,7 @@
 from typing import (
     Callable as _Callable,
     Literal as _Literal,
+    Optional as _Optional,
     Union as _Union,
 )
 
@@ -25,9 +26,12 @@ from wheely.mammoth.proteins import (
 def quantify_proteins_basic(
     dset: PsmIntensityDataset,
     qvalue_threshold: float = None,
-    reduction: _Union[
-        _Callable[[_Column], _Column], _Literal["sum", "max"]  # noqa: F821
-    ] = "sum",
+    filter_column: _Union[str, _Column] = None,
+    reduction: _Optional[
+        _Union[
+            _Callable[[_Column], _Column], _Literal["sum", "max"]  # noqa: F821
+        ]
+    ] = None,
 ) -> ProteinIntensityDataset:
     """
     Roll up PSM/precursor/peptide intensities to the protein level.
@@ -46,8 +50,14 @@ def quantify_proteins_basic(
     qvalue_threshold : float
         If provided, `dset` will be filtered to the given confidence level before rolling up to the protein level;
         in this case the dataset must be a `ConfidenceDataset`. If `None` no q-value filtering will be performed and
-        all PSMs will be rolled up.
+        all PSMs will be rolled up. This option can be specified in combination with `filter_column`, in which case
+        only rows passing both filters will be rolled up.
+    filter_column : str|Column (optional)
+        If provided, `dset` will be filtered to only rows with a true value in the specified column before rolling up
+        to the protein level. If `None` no filtering will be performed. This option can be specified in combination
+        with `qvalue_threshold`, in which case only rows passing both filters will be rolled up.
     reduction : str
+        Either "sum" or "max". Default: "sum"
 
     Returns
     -------
@@ -68,6 +78,11 @@ def quantify_proteins_basic(
         ), "dset must be a ConfidenceDataset if qvalue_threshold is specified"
         dset = dset.with_data(
             dset.data.filter(dset.qvalues <= qvalue_threshold),
+        )
+
+    if filter_column is not None:
+        dset = dset.with_data(
+            dset.data.filter(filter_column),
         )
 
     return ProteinIntensityDataset(
