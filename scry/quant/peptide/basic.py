@@ -14,20 +14,12 @@ from wheely.mammoth import (
 )
 
 
-@_overload
+@_overload  # type: ignore[misc]
 def quantify_basic(
     dset: ConfidenceDataset,
     sample_column: str,
     intensity_column: str,
 ) -> PsmIntensityConfidenceDataset: ...
-
-
-@_overload
-def quantify_basic(
-    dset: PsmDataset,
-    sample_column: str,
-    intensity_column: str,
-) -> PsmIntensityDataset: ...
 
 
 def quantify_basic(
