@@ -55,3 +55,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "wheely.mammoth.parsers"
 ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "wheely.mammoth.proteins"
+ignore_missing_imports = true
