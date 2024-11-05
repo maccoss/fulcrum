@@ -22,6 +22,14 @@ def quantify_basic(
 ) -> PsmIntensityConfidenceDataset: ...
 
 
+@_overload
+def quantify_basic(
+    dset: PsmDataset,
+    sample_column: str,
+    intensity_column: str,
+) -> PsmIntensityDataset: ...
+
+
 def quantify_basic(
     dset: PsmDataset,
     sample_column: str,
