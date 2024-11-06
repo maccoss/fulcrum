@@ -60,6 +60,24 @@ def test_filter_psms_with_psm_dataset(psm_dataset):
     assert filtered_dataset.data.filter(~fns.col(threshold_col)).isEmpty()
 
 
+# Because the dataset lacks confidence estimates, the qval_thresh will be ignored
+@pytest.mark.parametrize("qval_thresh", [None, 0.1])
+def test_filter_decoys_only(psm_dataset, qval_thresh):
+    """
+    Test that we can filter a non-confidence dataset based on decoy/target only
+    """
+    threshold_col = None
+    include_decoys = False
+
+    filtered_dataset = filter_psms(
+        psm_dataset, threshold_col, qval_thresh, include_decoys
+    )
+
+    # Perform assertions (e.g., check if the filtered dataset contains the expected PSMs)
+    assert psm_dataset.data.count() >= filtered_dataset.data.count()
+    assert filtered_dataset.data.filter(~filtered_dataset.targets).isEmpty()
+
+
 @pytest.mark.parametrize(
     "dataset_fixture", ["psm_dataset", "confidence_dataset", "spectra_dataset"]
 )

@@ -53,24 +53,20 @@ def filter_psms(
                         & (dataset.targets | _fns.lit(include_decoys))
                     )
                 )
-            else:
-                # No filtering possible
-                _logger.warning(
-                    "No `qval_thresh` or `threshold_col` is set for PSM filtering! Output will be unfiltered, with decoys %scluded",
-                    "in" if include_decoys else "ex",
-                )
-                return dataset.with_data(
-                    dataset.data.filter(
-                        dataset.targets | _fns.lit(include_decoys)
-                    )
-                )
+        elif qval_thresh is not None:
+            _logger.warning(
+                "Dataset lacks confidence estimates! Ignoring qval_thresh=%f",
+                qval_thresh,
+            )
 
         # No filtering possible
         _logger.warning(
-            "No `threshold_col` is set for PSM filtering! Output will be unfiltered, with decoys %scluded",
+            "No threshold for PSM filtering! Output will be unfiltered, with decoys %scluded",
             "in" if include_decoys else "ex",
         )
-        return dataset
+        return dataset.with_data(
+            dataset.data.filter(dataset.targets | _fns.lit(include_decoys))
+        )
 
     _logger.info(
         "Filtering PSMs with threshold: %s",
