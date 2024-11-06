@@ -11,7 +11,7 @@ from wheely.mammoth import (
     PsmDataset as _PsmDataset,
 )
 
-from .workflow import workflows as _workflows
+from .workflow import get_workflow as _get_workflow
 
 _logger = _logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def scry(
         Any keyword arguments are passed directly to the workflow
     """
     if not callable(workflow):
-        workflow = _workflows[workflow]
+        workflow = _get_workflow(workflow)
 
     if spark is None:
         _builder = _SparkSession.builder.master("local")
