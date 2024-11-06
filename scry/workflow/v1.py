@@ -11,7 +11,11 @@ from typing import (
     Union as _Union,
 )
 
-from pyspark.sql import SparkSession as _SparkSession
+import polars as _pl
+from pyspark.sql import (
+    SparkSession as _SparkSession,
+    functions as _fns,
+)
 
 from airpot import (
     brew as _brew,
@@ -19,6 +23,7 @@ from airpot import (
     RescoringResult as _RescoringResult,
 )
 from cortado import assign_confidence as _assign_confidence
+from proffer.spark import infer_spark as _infer_spark
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
     ConfidenceDataset as _ConfidenceDataset,
@@ -27,6 +32,8 @@ from wheely.mammoth import (
 from ..search import (
     get_backend as _get_search_backend,
 )
+from ..quant.peptide import get_backend as _get_peptide_quant_backend
+from ..quant.protein import get_backend as _get_protein_rollup_backend
 from ..output import (
     get_backend as _get_output_backend,
 )
@@ -35,11 +42,15 @@ _logger = _logging.getLogger(__name__)
 
 
 def scry_v1(
-    search: _Dict[str, _Any] = dict(),
-    airpot: _Dict[str, _Any] = dict(),
-    cortado: _Dict[str, _Any] = dict(),
-    # TODO
+    search: _Dict[str, _Any] = None,
+    airpot: _Dict[str, _Any] = None,
+    cortado: _Dict[str, _Any] = None,
+    peptide_quant=None,  # TODO
+    proffer=None,  # TODO
+    protein_scoring=None,  # TODO
+    protein_rollup=None,  # TODO
     output: _Union[str, _Dict[str, _Any]] = None,
+    # TODO: protein output?
     spark: _SparkSession = None,
 ) -> _ConfidenceDataset:
     """
@@ -60,18 +71,31 @@ def scry_v1(
     cortado: dict, optional
         Any arguments to pass to `cortado` for confidence estimation on the rescored dataset.
 
-    TODO
+    peptide_quant: dict, optional,
+        TODO
+
+    proffer: dict, optional
+        TODO
+
+    protein_scoring: dict, optional
+        TODO
+
+    protein_rollup: dict, optional
+        TODO
 
     output: str|dict, optional
+        TODO: revise output support!
         Any arguments to use for outputting FDR-controlled results. If a string, it will be
         passed to the `location` keyword of the default backend. If unspecified, None, or empty
         no output will be written.
 
         Special keys:
-        - `backend`: The backend that will compute or read search results. Default: `write_csv`
+        - `backend`: The backend that will compute or read search results. Default: `write_parquet`
            Either a string referring to a backend or plugin, or a callable. If a callable the
            `ConfidenceDataset` will be passed as the first argument, and any other items in the
            dict will be passed as keyword arguments.
+
+    # TODO: protein output?
 
     spark: SparkSession, optional
         A Spark session to use when creating the search result dataset. If `None` a session
@@ -83,6 +107,7 @@ def scry_v1(
     value other than `None`). If no `output` is specified, or if the output backend returns `None`
     this workflow will return the results from the `cortado` module.
     """
+    search = search or dict()
     search_backend = search.pop("backend", "read_existing")
     if not callable(search_backend):
         search_backend = _get_search_backend(search_backend)
@@ -104,7 +129,7 @@ def scry_v1(
 
     model_start = _time()
 
-    model: _BrewResult = _brew(psms, **airpot)
+    model: _BrewResult = _brew(psms, **(airpot or dict()))
 
     model_end = _time()
 
@@ -123,7 +148,7 @@ def scry_v1(
     ), "Did not get any rescored PSMs!"
 
     # Allow mutation
-    cortado = cortado.copy()
+    cortado = cortado.copy() if cortado else dict()
 
     # If unspecified, assume the first score is the rescored one
     score_name = cortado.pop(
@@ -162,12 +187,97 @@ def scry_v1(
         100 * test_fdr,
     )
 
-    # TODO
+    peptide_quant = peptide_quant.copy() if peptide_quant else dict()
+    quant_backend = peptide_quant.pop("backend", "basic")
+    if not callable(quant_backend):
+        quant_backend = _get_peptide_quant_backend(quant_backend)
+
+    peptide_quant = quant_backend(
+        conf,
+        **peptide_quant,
+    )
+
+    # Get a table of peptides with their group and proteotypicity
+    inference = _infer_spark(conf, **(proffer or dict()))
+
+    # The result from Proffer will have list-valued protein groups; we need to join back together IDs
+    # into a single string to get them into Spark via Pandas; ideally this could be avoided by using
+    # Arrow instead as the interchange between Polars and Spark.
+    protein_delim = conf.protein_delim or ";"
+    inference_spark = conf.data.sparkSession.createDataFrame(
+        inference.select(
+            _pl.col("peptide").alias(conf.peptide_column),
+            _pl.col("protein_group")
+            .list.unique()
+            .list.sort()
+            .list.join(protein_delim),
+            "proteotypic",
+        ).to_pandas()
+    )
+
+    res_inferred = conf.with_data(
+        conf.data.join(
+            inference_spark,
+            on=conf.peptide_column,
+            how="leftouter",
+        ),
+        protein_column="protein_group",
+        protein_delim=protein_delim,
+    )
+
+    # Compute protein FDR
+    from cortado.protein import score_proteins
+
+    protein_result = score_proteins(
+        res_inferred,
+        **(protein_scoring or {}),
+    )
+
+    protein_rollup = protein_rollup.copy() if protein_rollup else dict()
+    rollup_backend = protein_rollup.pop("backend", "basic")
+    if not callable(rollup_backend):
+        rollup_backend = _get_protein_rollup_backend(rollup_backend)
+
+    protein_quant = rollup_backend(
+        peptide_quant,
+        **protein_rollup,
+    )
+
+    protein_result = protein_result.with_data(
+        protein_result.data.join(
+            protein_quant.data.select(
+                (
+                    # To match the handling of protein group IDs above, we must join group IDs into strings
+                    _fns.array_join(
+                        (
+                            protein_quant.proteins
+                            if protein_quant.protein_delim is None
+                            else _fns.split(
+                                protein_quant.proteins,
+                                protein_quant.protein_delim,
+                            )
+                        ),
+                        protein_result.protein_delim,
+                    )
+                ).alias(protein_result.protein_column),
+                protein_quant.samples,
+                protein_quant.intensities,
+            ),
+            on=protein_result.protein_column,
+            how="left",
+        )
+    )
+
     if output:
+        # TODO: revise output support!
+        assert output == dict(
+            backend=None
+        ), "TODO: only output.backend=None is supported!"
+
         if isinstance(output, str):
             output = dict(location=output)
 
-        output_backend = output.pop("backend", "write_csv")
+        output_backend = output.pop("backend", "write_parquet")
         if not callable(output_backend):
             output_backend = _get_output_backend(output_backend)
 
@@ -185,4 +295,7 @@ def scry_v1(
     else:
         output_result = None
 
+    # TODO: protein output?
+
+    # TODO: protein result?
     return conf if output_result is None else output_result
