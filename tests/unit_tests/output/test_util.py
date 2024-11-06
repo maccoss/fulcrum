@@ -60,12 +60,13 @@ def test_filter_psms_with_psm_dataset(psm_dataset):
     assert filtered_dataset.data.filter(~fns.col(threshold_col)).isEmpty()
 
 
-def test_filter_decoys_only(psm_dataset):
+# Because the dataset lacks confidence estimates, the qval_thresh will be ignored
+@pytest.mark.parametrize("qval_thresh", [None, 0.1])
+def test_filter_decoys_only(psm_dataset, qval_thresh):
     """
     Test that we can filter a non-confidence dataset based on decoy/target only
     """
     threshold_col = None
-    qval_thresh = None
     include_decoys = False
 
     filtered_dataset = filter_psms(
