@@ -23,6 +23,7 @@ from airpot import (
     RescoringResult as _RescoringResult,
 )
 from cortado import assign_confidence as _assign_confidence
+from cortado.protein import score_proteins as _score_proteins
 from proffer.spark import infer_spark as _infer_spark
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
@@ -187,15 +188,7 @@ def scry_v1(
         100 * test_fdr,
     )
 
-    peptide_quant = peptide_quant.copy() if peptide_quant else dict()
-    quant_backend = peptide_quant.pop("backend", "basic")
-    if not callable(quant_backend):
-        quant_backend = _get_peptide_quant_backend(quant_backend)
-
-    peptide_quant = quant_backend(
-        conf,
-        **peptide_quant,
-    )
+    # TODO: add logging, durations
 
     # Get a table of peptides with their group and proteotypicity
     inference = _infer_spark(conf, **(proffer or dict()))
@@ -225,12 +218,22 @@ def scry_v1(
         protein_delim=protein_delim,
     )
 
-    # Compute protein FDR
-    from cortado.protein import score_proteins
-
-    protein_result = score_proteins(
+    # Compute protein FDR by rescoring protein groups
+    # TODO: pluggable backends
+    protein_result = _score_proteins(
         res_inferred,
         **(protein_scoring or {}),
+    )
+
+    # Quantify peptides after they're annotated with groups, to simplify rollup
+    peptide_quant = peptide_quant.copy() if peptide_quant else dict()
+    quant_backend = peptide_quant.pop("backend", "basic")
+    if not callable(quant_backend):
+        quant_backend = _get_peptide_quant_backend(quant_backend)
+
+    pep_quant_dset = quant_backend(
+        res_inferred,
+        **peptide_quant,
     )
 
     protein_rollup = protein_rollup.copy() if protein_rollup else dict()
@@ -238,33 +241,33 @@ def scry_v1(
     if not callable(rollup_backend):
         rollup_backend = _get_protein_rollup_backend(rollup_backend)
 
-    protein_quant = rollup_backend(
-        peptide_quant,
+    prot_quant_dset = rollup_backend(
+        pep_quant_dset,
         **protein_rollup,
     )
 
     protein_result = protein_result.with_data(
         protein_result.data.join(
-            protein_quant.data.select(
+            prot_quant_dset.data.select(
                 (
                     # To match the handling of protein group IDs above, we must join group IDs into strings
                     _fns.array_join(
                         (
-                            protein_quant.proteins
-                            if protein_quant.protein_delim is None
+                            prot_quant_dset.proteins
+                            if prot_quant_dset.protein_delim is None
                             else _fns.split(
-                                protein_quant.proteins,
-                                protein_quant.protein_delim,
+                                prot_quant_dset.proteins,
+                                prot_quant_dset.protein_delim,
                             )
                         ),
                         protein_result.protein_delim,
                     )
                 ).alias(protein_result.protein_column),
-                protein_quant.samples,
-                protein_quant.intensities,
+                prot_quant_dset.samples,
+                prot_quant_dset.intensities,
             ),
             on=protein_result.protein_column,
-            how="left",
+            how="leftouter",
         )
     )
 
@@ -297,5 +300,5 @@ def scry_v1(
 
     # TODO: protein output?
 
-    # TODO: protein result?
-    return conf if output_result is None else output_result
+    assert not output_result, "TODO"
+    return pep_quant_dset, protein_result
