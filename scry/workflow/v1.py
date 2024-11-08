@@ -8,6 +8,7 @@ from typing import (
     Any as _Any,
     Callable as _Callable,
     Dict as _Dict,
+    Optional as _Optional,
     Union as _Union,
 )
 
@@ -43,16 +44,16 @@ _logger = _logging.getLogger(__name__)
 
 
 def scry_v1(
-    search: _Dict[str, _Any] = None,
-    airpot: _Dict[str, _Any] = None,
-    cortado: _Dict[str, _Any] = None,
-    peptide_quant=None,  # TODO
-    proffer=None,  # TODO
-    protein_scoring=None,  # TODO
-    protein_rollup=None,  # TODO
-    output: _Union[str, _Dict[str, _Any]] = None,
+    search: _Optional[_Dict[str, _Any]] = None,
+    airpot: _Optional[_Dict[str, _Any]] = None,
+    cortado: _Optional[_Dict[str, _Any]] = None,
+    peptide_quant: _Optional[_Dict[str, _Any]] = None,
+    proffer: _Optional[_Dict[str, _Any]] = None,
+    protein_scoring: _Optional[_Dict[str, _Any]] = None,
+    protein_rollup: _Optional[_Dict[str, _Any]] = None,
+    output: _Optional[_Union[str, _Dict[str, _Any]]] = None,
     # TODO: protein output?
-    spark: _SparkSession = None,
+    spark: _Optional[_SparkSession] = None,
 ) -> _ConfidenceDataset:
     """
     scry_v1: basic ID/quant workflow
@@ -188,10 +189,16 @@ def scry_v1(
         100 * test_fdr,
     )
 
-    # TODO: add logging, durations
-
     # Get a table of peptides with their group and proteotypicity
+    inf_start = _time()
     inference = _infer_spark(conf, **(proffer or dict()))
+    inf_end = _time()
+
+    _logger.info(
+        "Inferred %d protein groups in %.02f sec",
+        inference.select(_pl.col("protein_group").n_unique()),
+        inf_end - inf_start,
+    )
 
     # The result from Proffer will have list-valued protein groups; we need to join back together IDs
     # into a single string to get them into Spark via Pandas; ideally this could be avoided by using
@@ -220,10 +227,26 @@ def scry_v1(
 
     # Compute protein FDR by rescoring protein groups
     # TODO: pluggable backends
-    protein_result = _score_proteins(
+    prot_conf_start = _time()
+    prot_conf = _score_proteins(
         res_inferred,
         **(protein_scoring or {}),
     )
+    prot_conf_end = _time()
+
+    n_prot_confs = prot_conf.data.count()
+    _logger.info(
+        "Scored %d protein groups in %.02f sec",
+        n_prot_confs,
+        prot_conf_end - prot_conf_start,
+    )
+
+    if (c := getattr(prot_conf, "qvalue_column", None)) is not None:
+        _logger.info(
+            "Found %d protein groups at %.0f%% FDR",
+            prot_conf.data.filter(_fns.col(c) <= test_fdr).count(),
+            100 * test_fdr,
+        )
 
     # Quantify peptides after they're annotated with groups, to simplify rollup
     peptide_quant = peptide_quant.copy() if peptide_quant else dict()
@@ -231,9 +254,17 @@ def scry_v1(
     if not callable(quant_backend):
         quant_backend = _get_peptide_quant_backend(quant_backend)
 
+    quant_start = _time()
     pep_quant_dset = quant_backend(
         res_inferred,
         **peptide_quant,
+    )
+    quant_end = _time()
+
+    _logger.info(
+        "Quantified %d peptides in %.02f sec",
+        pep_quant_dset.data.count(),
+        quant_end - quant_start,
     )
 
     protein_rollup = protein_rollup.copy() if protein_rollup else dict()
@@ -241,13 +272,20 @@ def scry_v1(
     if not callable(rollup_backend):
         rollup_backend = _get_protein_rollup_backend(rollup_backend)
 
+    rollup_start = _time()
     prot_quant_dset = rollup_backend(
         pep_quant_dset,
         **protein_rollup,
     )
+    rollup_end = _time()
 
-    protein_result = protein_result.with_data(
-        protein_result.data.join(
+    _logger.info(
+        "Rolled up protein group intensities in %.02f sec",
+        rollup_end - rollup_start,
+    )
+
+    protein_result = prot_conf.with_data(
+        prot_conf.data.join(
             prot_quant_dset.data.select(
                 (
                     # To match the handling of protein group IDs above, we must join group IDs into strings
@@ -260,13 +298,13 @@ def scry_v1(
                                 prot_quant_dset.protein_delim,
                             )
                         ),
-                        protein_result.protein_delim,
+                        prot_conf.protein_delim,
                     )
-                ).alias(protein_result.protein_column),
+                ).alias(prot_conf.protein_column),
                 prot_quant_dset.samples,
                 prot_quant_dset.intensities,
             ),
-            on=protein_result.protein_column,
+            on=prot_conf.protein_column,
             how="leftouter",
         )
     )
