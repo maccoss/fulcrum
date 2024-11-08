@@ -74,16 +74,23 @@ def scry_v1(
         Any arguments to pass to `cortado` for confidence estimation on the rescored dataset.
 
     peptide_quant: dict, optional,
-        TODO
+        Any arguments to use for computing PSM quantities.
+
+        Special keys:
+        - `backend`: The backend to run. Either the name of the backend, or a callable. Default: `basic`
 
     proffer: dict, optional
-        TODO
+        Any arguments to pass to `proffer.infer_spark`. In typical usage, it's strongly recommended to specify
+        a `qvalue_threshold`!
 
     protein_scoring: dict, optional
-        TODO
+        Any arguments to `cortado.protein.score_proteins` for protein scoring and (optinal) confidence estimation.
 
     protein_rollup: dict, optional
-        TODO
+        Any arguments to use for computing protein quantities.
+
+        Special keys:
+        - `backend`: The backend to run. Either the name of the backend, or a callable. Default: `basic`
 
     output: str|dict, optional
         TODO: revise output support!
@@ -93,7 +100,7 @@ def scry_v1(
 
         Special keys:
         - `backend`: The backend that will compute or read search results. Default: `write_parquet`
-           Either a string referring to a backend or plugin, or a callable. If a callable the
+           Either a string referring to a backend or plugin, or a `Callable`. If a callable the
            `ConfidenceDataset` will be passed as the first argument, and any other items in the
            dict will be passed as keyword arguments.
 
