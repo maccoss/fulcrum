@@ -150,11 +150,12 @@ def scry_v1(
     if not psms:
         raise ValueError("Got invalid PSM dataset from search backend!")
 
-    _logger.info(
-        "Search stage found %d PSMs in %.02f sec",
-        psms.data.count(),
-        search_end - search_start,
-    )
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Search stage found %d PSMs in %.02f sec",
+            psms.data.count(),
+            search_end - search_start,
+        )
 
     model_start = _time()
 
@@ -210,22 +211,17 @@ def scry_v1(
     )
 
     test_fdr = 0.01  # TODO
-    _logger.info(
-        "Found %d PSMs or peptides at %.0f%% FDR",
-        conf.data.filter(conf.qvalues <= test_fdr).count(),
-        100 * test_fdr,
-    )
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Found %d PSMs or peptides at %.0f%% FDR",
+            conf.data.filter(conf.qvalues <= test_fdr).count(),
+            100 * test_fdr,
+        )
 
     # Get a table of peptides with their group and proteotypicity
     inf_start = _time()
     inference = _infer_spark(conf, **(proffer or dict()))
     inf_end = _time()
-
-    _logger.info(
-        "Inferred %d protein groups in %.02f sec",
-        inference.select(_pl.col("protein_group").n_unique()),
-        inf_end - inf_start,
-    )
 
     # The result from Proffer will have list-valued protein groups; we need to join back together IDs
     # into a single string to get them into Spark via Pandas; ideally this could be avoided by using
@@ -241,6 +237,15 @@ def scry_v1(
             "proteotypic",
         ).to_pandas()
     )
+
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Inferred %d protein groups in %.02f sec",
+            inference_spark.select(_fns.countDistinct("protein_group"))
+            .toPandas()
+            .iloc[0, 0],
+            inf_end - inf_start,
+        )
 
     res_inferred = conf.with_data(
         conf.data.join(
@@ -261,14 +266,16 @@ def scry_v1(
     )
     prot_conf_end = _time()
 
-    n_prot_confs = prot_conf.data.count()
-    _logger.info(
-        "Scored %d protein groups in %.02f sec",
-        n_prot_confs,
-        prot_conf_end - prot_conf_start,
-    )
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Scored %d protein groups in %.02f sec",
+            prot_conf.data.count(),
+            prot_conf_end - prot_conf_start,
+        )
 
-    if (c := getattr(prot_conf, "qvalue_column", None)) is not None:
+    if (
+        c := getattr(prot_conf, "qvalue_column", None)
+    ) is not None and _logger.isEnabledFor(_logging.INFO):
         _logger.info(
             "Found %d protein groups at %.0f%% FDR",
             prot_conf.data.filter(_fns.col(c) <= test_fdr).count(),
@@ -288,11 +295,12 @@ def scry_v1(
     )
     quant_end = _time()
 
-    _logger.info(
-        "Quantified %d peptides in %.02f sec",
-        pep_quant_dset.data.count(),
-        quant_end - quant_start,
-    )
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Quantified %d peptides in %.02f sec",
+            pep_quant_dset.data.count(),
+            quant_end - quant_start,
+        )
 
     protein_rollup = protein_rollup.copy() if protein_rollup else dict()
     rollup_backend = protein_rollup.pop("backend", "basic")
