@@ -359,6 +359,8 @@ def scry_v1(
         peptide_output = dict()
 
     peptide_out_backend = peptide_output.pop("backend", "write_parquet")
+    if not callable(peptide_out_backend):
+        peptide_out_backend = _get_output_backend(peptide_out_backend)
 
     pep_out_start = _time()
     pep_out_res = peptide_out_backend(pep_quant_dset, **peptide_output)
@@ -386,6 +388,8 @@ def scry_v1(
         protein_output = dict()
 
     protein_out_backend = protein_output.pop("backend", "write_parquet")
+    if not callable(protein_out_backend):
+        protein_out_backend = _get_output_backend(protein_out_backend)
 
     prot_out_start = _time()
     prot_out_res = protein_out_backend(protein_result, **protein_output)
