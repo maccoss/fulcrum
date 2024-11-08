@@ -2,6 +2,7 @@
 `scry.output.confidence`: output implementations for confidence results
 """
 
+import logging as _logging
 from typing import (
     Optional as _Optional,
     Union as _Union,
@@ -15,6 +16,8 @@ from wheely.mammoth import PsmDataset as _PsmDataset
 from wheely.mammoth.proteins import ProteinDataset as _ProteinDataset
 
 from .util import filter_psms
+
+_logger = _logging.getLogger(__name__)
 
 
 def write_csv(
@@ -58,6 +61,9 @@ def write_csv(
         qval_thresh=qval_thresh,
         include_decoys=include_decoys,
     )
+
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info("Will write results for %d rows…", data_filt.data.count())
 
     _kwargs = kwargs.copy()
 
@@ -110,6 +116,9 @@ def write_parquet(
         qval_thresh=qval_thresh,
         include_decoys=include_decoys,
     )
+
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info("Will write results for %d rows…", data_filt.data.count())
 
     _kwargs = kwargs.copy()
 

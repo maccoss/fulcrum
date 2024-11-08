@@ -30,6 +30,9 @@ from wheely.mammoth import (
     PsmDataset as _PsmDataset,
     ConfidenceDataset as _ConfidenceDataset,
 )
+from wheely.mammoth.proteins import (
+    ProteinDataset as _ProteinDataset,
+)
 
 from ..search import (
     get_backend as _get_search_backend,
@@ -51,10 +54,11 @@ def scry_v1(
     proffer: _Optional[_Dict[str, _Any]] = None,
     protein_scoring: _Optional[_Dict[str, _Any]] = None,
     protein_rollup: _Optional[_Dict[str, _Any]] = None,
-    output: _Optional[_Union[str, _Dict[str, _Any]]] = None,
-    # TODO: protein output?
+    output: _Optional[_Dict[str, _Any]] = None,
+    peptide_output: _Optional[_Union[str, _Dict[str, _Any]]] = None,
+    protein_output: _Optional[_Union[str, _Dict[str, _Any]]] = None,
     spark: _Optional[_SparkSession] = None,
-) -> _ConfidenceDataset:
+) -> (_PsmDataset, _ProteinDataset):
     """
     scry_v1: basic ID/quant workflow
 
@@ -92,19 +96,35 @@ def scry_v1(
         Special keys:
         - `backend`: The backend to run. Either the name of the backend, or a callable. Default: `basic`
 
-    output: str|dict, optional
-        TODO: revise output support!
-        Any arguments to use for outputting FDR-controlled results. If a string, it will be
-        passed to the `location` keyword of the default backend. If unspecified, None, or empty
-        no output will be written.
+    output: dict, optional
+        Default parameters for outputting both peptide and protein level results. Parameters given here will
+        be overridden by the `peptide_output` or `protein_output` parameter if one or both is specified.
 
         Special keys:
-        - `backend`: The backend that will compute or read search results. Default: `write_parquet`
+        - `backend`: The backend that will write results. Default: `write_parquet`
            Either a string referring to a backend or plugin, or a `Callable`. If a callable the
            `ConfidenceDataset` will be passed as the first argument, and any other items in the
            dict will be passed as keyword arguments.
 
-    # TODO: protein output?
+    peptide_output: str | dict, optional
+        If a string, the location for peptide output, in which case the backend and parameters from `output` will
+        be used. If a dict, parameters for output peptide-level results.
+
+        Special keys:
+        - `backend`: The backend that will write peptide-level results. Default: `write_parquet`
+           Either a string referring to a backend or plugin, or a `Callable`. If a callable the
+           `ConfidenceDataset` will be passed as the first argument, and any other items in the
+           dict will be passed as keyword arguments.
+
+    protein_output: str | dict, optional
+        If a string, the location for protein output, in which case the backend and parameters from `output` will
+        be used. If a dict, parameters for output protein-level results.
+
+        Special keys:
+        - `backend`: The backend that will write protein-level results. Default: `write_parquet`
+           Either a string referring to a backend or plugin, or a `Callable`. If a callable the
+           `ConfidenceDataset` will be passed as the first argument, and any other items in the
+           dict will be passed as keyword arguments.
 
     spark: SparkSession, optional
         A Spark session to use when creating the search result dataset. If `None` a session
@@ -316,34 +336,58 @@ def scry_v1(
         )
     )
 
-    if output:
-        # TODO: revise output support!
-        assert output == dict(
-            backend=None
-        ), "TODO: only output.backend=None is supported!"
-
-        if isinstance(output, str):
-            output = dict(location=output)
-
-        output_backend = output.pop("backend", "write_parquet")
-        if not callable(output_backend):
-            output_backend = _get_output_backend(output_backend)
-
-        output_start = _time()
-
-        output_result = output_backend(conf, **output)
-
-        output_end = _time()
-
-        _logger.info(
-            "Wrote results for %d PSMs or peptides in %.02f sec",
-            n_confs,
-            output_end - output_start,
+    # Output peptide results
+    if isinstance(peptide_output, str):
+        pep_out_loc = peptide_output
+        peptide_output = dict(
+            output or dict(),
+            **dict(
+                location=pep_out_loc,
+            ),
         )
+    elif peptide_output:
+        peptide_output = peptide_output.copy()
     else:
-        output_result = None
+        peptide_output = dict()
 
-    # TODO: protein output?
+    peptide_out_backend = peptide_output.pop("backend", "write_parquet")
 
-    assert not output_result, "TODO"
-    return pep_quant_dset, protein_result
+    pep_out_start = _time()
+    pep_out_res = peptide_out_backend(pep_quant_dset, **peptide_output)
+    pep_out_end = _time()
+
+    _logger.info(
+        "Wrote peptide results in %.02f sec",
+        pep_out_end - pep_out_start,
+    )
+
+    pep_res = pep_out_res or pep_quant_dset
+
+    # Output protein results
+    if isinstance(protein_output, str):
+        prot_out_loc = protein_output
+        protein_output = dict(
+            output or dict(),
+            **dict(
+                location=prot_out_loc,
+            ),
+        )
+    elif protein_output:
+        protein_output = protein_output.copy()
+    else:
+        protein_output = dict()
+
+    protein_out_backend = protein_output.pop("backend", "write_parquet")
+
+    prot_out_start = _time()
+    prot_out_res = protein_out_backend(protein_result, **protein_output)
+    prot_out_end = _time()
+
+    _logger.info(
+        "Wrote peptide results in %.02f sec",
+        prot_out_end - prot_out_start,
+    )
+
+    prot_res = prot_out_res or protein_result
+
+    return pep_res, prot_res
