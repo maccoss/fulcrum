@@ -64,7 +64,7 @@ def filter_psms(
     """
 
     if threshold_col is None:
-        if isinstance(dataset, _ConfidenceDataset):
+        if (qval_col := getattr(dataset, "qvalue_column", None)) is not None:
             if qval_thresh is not None:
                 _logger.info(
                     "Filtering PSMs with q-value threshold %f and decoys %scluded",
@@ -74,7 +74,7 @@ def filter_psms(
 
                 return dataset.with_data(
                     dataset.data.filter(
-                        (dataset.qvalues <= qval_thresh)
+                        (_fns.col(qval_col) <= qval_thresh)
                         & (dataset.targets | _fns.lit(include_decoys))
                     )
                 )
