@@ -7,9 +7,9 @@ jobs:
     runs-on: [self-hosted, X64]
     steps:
       - uses: actions/checkout@v2
-#      - uses: actions/setup-python@v2
-#        with:
-#          python-version: "3.8"
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
       - run: |
           pip config unset global.index-url || true  # Ensure we don't have old CodeArtifact creds in pip config
           pip install 'awscli>=1.18.83'
