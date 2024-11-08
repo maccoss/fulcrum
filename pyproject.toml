@@ -44,6 +44,14 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "cortado"
 ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "cortado.protein"
+ignore_missing_imports = true
+
+# TODO
+[[tool.mypy.overrides]]
+module = "proffer.spark"
+ignore_missing_imports = true
 
 # TODO
 [[tool.mypy.overrides]]
