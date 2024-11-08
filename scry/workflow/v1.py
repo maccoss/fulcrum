@@ -9,6 +9,7 @@ from typing import (
     Callable as _Callable,
     Dict as _Dict,
     Optional as _Optional,
+    Tuple as _Tuple,
     Union as _Union,
 )
 
@@ -58,7 +59,7 @@ def scry_v1(
     peptide_output: _Optional[_Union[str, _Dict[str, _Any]]] = None,
     protein_output: _Optional[_Union[str, _Dict[str, _Any]]] = None,
     spark: _Optional[_SparkSession] = None,
-) -> (_PsmDataset, _ProteinDataset):
+) -> _Tuple[_PsmDataset, _ProteinDataset]:
     """
     scry_v1: basic ID/quant workflow
 
