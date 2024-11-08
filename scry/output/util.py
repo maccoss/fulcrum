@@ -26,7 +26,7 @@ def filter_psms(
 ) -> _PsmDataset: ...
 
 
-@_overload
+@_overload  # type: ignore[misc]
 def filter_psms(
     dataset: _ProteinDataset,
     threshold_col: _Optional[_Union[str, _Column]],
@@ -36,7 +36,7 @@ def filter_psms(
 
 
 def filter_psms(
-    dataset,
+    dataset: _Union[_PsmDataset, _ProteinDataset],
     threshold_col: _Optional[_Union[str, _Column]],
     qval_thresh: _Optional[float],
     include_decoys: _Optional[bool],
