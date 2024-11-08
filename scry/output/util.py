@@ -1,30 +1,55 @@
 import logging as _logging
-from typing import Optional as _Optional, Union as _Union
+from typing import (
+    Optional as _Optional,
+    Union as _Union,
+    overload as _overload,
+)
 
 from pyspark.sql import Column as _Column, functions as _fns
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
     ConfidenceDataset as _ConfidenceDataset,
 )
+from wheely.mammoth.proteins import (
+    ProteinDataset as _ProteinDataset,
+)
 
 _logger = _logging.getLogger(__name__)
 
 
+@_overload
 def filter_psms(
     dataset: _PsmDataset,
     threshold_col: _Optional[_Union[str, _Column]],
     qval_thresh: _Optional[float],
     include_decoys: _Optional[bool],
-) -> _PsmDataset:
+) -> _PsmDataset: ...
+
+
+@_overload
+def filter_psms(
+    dataset: _ProteinDataset,
+    threshold_col: _Optional[_Union[str, _Column]],
+    qval_thresh: _Optional[float],
+    include_decoys: _Optional[bool],
+) -> _ProteinDataset: ...
+
+
+def filter_psms(
+    dataset,
+    threshold_col: _Optional[_Union[str, _Column]],
+    qval_thresh: _Optional[float],
+    include_decoys: _Optional[bool],
+):
     """
     Return a dataset containing only filtered PSMs, as follows:
 
     If the optional `threshold_col` parameter is provided, only rows where this column
     is `True` will be included in the output. If `threshold_col` is not specified but the dataset is
-    a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
-    PSMs. Otherwise all target PSMs in the dataset will be included in the output. To include decoys
-    in the output, pass `include_decoys=True` (note: `include_decoys` is ignored if `threshold_col`
-    is specified).
+    a `wheely.mammoth.ConfidenceDataset` or a `wheelyy.mammoth.proteins.ProteinConfidenceDataset` the optional
+    `qval_thresh` parameter will be used to filter PSMs or proteins. Otherwise all target rows in the dataset
+    will be included in the output. To include decoys in the output, pass `include_decoys=True`
+    (note: `include_decoys` is ignored if `threshold_col` is specified).
 
     Parameters
     ----------
@@ -71,7 +96,6 @@ def filter_psms(
     _logger.info(
         "Filtering PSMs with threshold: %s",
         threshold_col,
-        "in" if include_decoys else "ex",
     )
 
     return dataset.with_data(dataset.data.filter(threshold_col))
