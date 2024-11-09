@@ -8,13 +8,14 @@ import logging as _logging
 # be used like so -> from importlib.metadata import entry_points
 from importlib_metadata import entry_points
 
-from .basic import write_csv
+from .basic import write_csv, write_parquet
 from .library import write_library
 
 _logger = _logging.getLogger(__name__)
 
 _backends = {
     "write_csv": write_csv,
+    "write_parquet": write_parquet,
     "write_library": write_library,
 }
 _plugins = None
