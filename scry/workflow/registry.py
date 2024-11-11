@@ -9,11 +9,13 @@ import logging as _logging
 from importlib_metadata import entry_points
 
 from .v0 import scry_v0
+from .v1 import scry_v1
 
 _logger = _logging.getLogger(__name__)
 
 _workflows = {
     "v0": scry_v0,
+    "v1": scry_v1,
 }
 _plugins = None
 

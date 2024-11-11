@@ -12,7 +12,10 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import rand as _rand
 
 from wheely.mammoth import ConfidenceDataset, PsmDataset
+from wheely.mammoth.proteins import ProteinDataset, ProteinConfidenceDataset
 from wheely.mammoth.parsers import read_encyclopedia_features
+
+from cortado.protein import score_proteins
 
 
 @pytest.fixture
@@ -127,3 +130,25 @@ def confidence_dataset(psm_dataset) -> ConfidenceDataset:
     )
 
     return dataset
+
+
+@pytest.fixture
+def protein_dataset(psm_dataset) -> ProteinDataset:
+    return score_proteins(
+        psm_dataset,
+        rollup_level="peptide",
+        score_column=psm_dataset.score_columns[0],
+        desc=False,
+        assign_confidence=False,
+    )
+
+
+@pytest.fixture
+def protein_confidence_dataset(psm_dataset) -> ProteinConfidenceDataset:
+    return score_proteins(
+        psm_dataset,
+        rollup_level="peptide",
+        score_column=psm_dataset.score_columns[0],
+        desc=False,
+        assign_confidence=True,
+    )
