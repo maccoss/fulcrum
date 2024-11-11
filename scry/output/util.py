@@ -62,12 +62,20 @@ def filter_psms(
     include_decoys (bool; default = False): If true, include decoy PSMs in the library. Ignored
         if `threshold_col` is specified.
     """
+    analyte = (
+        "PSM"
+        if isinstance(dataset, _PsmDataset)
+        else (
+            "Protein" if isinstance(dataset, _ProteinDataset) else "Analyte"
+        )  # Should be unreachable in normal usage
+    )
 
     if threshold_col is None:
         if (qval_col := getattr(dataset, "qvalue_column", None)) is not None:
             if qval_thresh is not None:
                 _logger.info(
-                    "Filtering PSMs with q-value threshold %f and decoys %scluded",
+                    "Filtering %ss with q-value threshold %f and decoys %scluded",
+                    analyte,
                     qval_thresh,
                     "in" if include_decoys else "ex",
                 )
@@ -80,21 +88,25 @@ def filter_psms(
                 )
         elif qval_thresh is not None:
             _logger.warning(
-                "Dataset lacks confidence estimates! Ignoring qval_thresh=%f",
+                "Dataset lacks %s confidence estimates! Ignoring qval_thresh=%f",
+                analyte,
                 qval_thresh,
             )
 
         # No filtering possible
         _logger.warning(
-            "No threshold for PSM filtering! Output will be unfiltered, with decoys %scluded",
+            "No threshold for %s filtering! Output will be unfiltered, with decoys %scluded",
+            analyte,
             "in" if include_decoys else "ex",
         )
+
         return dataset.with_data(
             dataset.data.filter(dataset.targets | _fns.lit(include_decoys))
         )
 
     _logger.info(
-        "Filtering PSMs with threshold: %s",
+        "Filtering %s with threshold: %s",
+        analyte,
         threshold_col,
     )
 
