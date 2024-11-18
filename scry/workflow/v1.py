@@ -350,12 +350,17 @@ def scry_v1(
         pep_out_loc = peptide_output
         peptide_output = dict(
             output or dict(),
-            **dict(
-                location=pep_out_loc,
-            ),
+            location=pep_out_loc,
         )
     elif peptide_output:
-        peptide_output = peptide_output.copy()
+        if set(peptide_output.keys()) == set(["location"]):
+            pep_out_loc = peptide_output["location"]
+            peptide_output = dict(
+                output or dict(),
+                location=pep_out_loc,
+            )
+        else:
+            peptide_output = peptide_output.copy()
     else:
         peptide_output = dict()
 
@@ -379,12 +384,17 @@ def scry_v1(
         prot_out_loc = protein_output
         protein_output = dict(
             output or dict(),
-            **dict(
-                location=prot_out_loc,
-            ),
+            location=prot_out_loc,
         )
     elif protein_output:
-        protein_output = protein_output.copy()
+        if set(protein_output.keys()) == set(["location"]):
+            prot_out_loc = protein_output["location"]
+            protein_output = dict(
+                output or dict(),
+                location=prot_out_loc,
+            )
+        else:
+            protein_output = protein_output.copy()
     else:
         protein_output = dict()
 
