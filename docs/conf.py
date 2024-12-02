@@ -16,6 +16,7 @@ author = "Seer, Inc."
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
+    "autoapi.extension",
     "sphinx.ext.todo",
 ]
 
@@ -23,6 +24,15 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 language = "en"
+
+autoapi_dirs = ["../scry"]
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "imported-members",
+]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
