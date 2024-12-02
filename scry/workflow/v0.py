@@ -42,7 +42,13 @@ def scry_v0(
     spark: _SparkSession = None,
 ) -> _ConfidenceDataset:
     """
-    scry_v0: initial experimental workflow
+    Workflow for peptide ID and confidence
+
+    Supports flexible output, such as creating a spectral library.
+
+    To use, call `scry.scry(workflow="v0")` or run `scry` using the following TOML::
+
+        workflow = "v0"
 
     Parameters
     ----------

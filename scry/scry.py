@@ -22,14 +22,17 @@ def scry(
     **kwargs,
 ) -> _PsmDataset:
     """
-    `scry()`: run a Scry workflow using the specified parameters
+    Run a Scry workflow using the specified parameters
 
     Parameters
     ----------
     workflow: str|Callable, optional
-        The name of a packaged workflow, or a callable matching the expected workflow signature.
-        Default: "v0"
-    **kwargs
+        The name of registered workflow, or a callable.
+
+        For a list of built-in workflows, see :py:mod:`scry.workflow`.
+
+        Default: `"v0"`
+    kwargs
         Any keyword arguments are passed directly to the workflow
     """
     if not callable(workflow):

@@ -61,7 +61,14 @@ def scry_v1(
     spark: _Optional[_SparkSession] = None,
 ) -> _Tuple[_PsmDataset, _ProteinDataset]:
     """
-    scry_v1: basic ID/quant workflow
+    Workflow for peptide and protein ID/quant
+
+    Most steps of the workflow can use a variety of implementations, and support
+    plugins to permit maximum flexibility.
+
+    To use, call `scry.scry(workflow="v1")` or run `scry` using the following TOML::
+
+        workflow = "v1"
 
     Parameters
     ----------

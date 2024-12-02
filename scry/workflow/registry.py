@@ -1,8 +1,9 @@
 """
-`scry.workflow.registry`: allows registering pluggable workflows
+`scry.workflow.registry`: registry for pluggable workflows
 """
 
 import logging as _logging
+from typing import Callable as _Callable
 
 # Once the min supported version reaches 3.10, the standard library should
 # be used like so -> from importlib.metadata import entry_points
@@ -15,12 +16,28 @@ _logger = _logging.getLogger(__name__)
 
 _workflows = {
     "v0": scry_v0,
+    "scry_v0": scry_v0,
     "v1": scry_v1,
+    "scry_v1": scry_v1,
 }
 _plugins = None
 
 
-def register_workflow(name, workflow, clobber=False):
+def register_workflow(name: str, workflow: _Callable, clobber=False):
+    """
+    Register a callable with the given name
+
+    A workflow can be easily implemented by defining a function with the signature::
+
+        def my_workflow(spark: SparkSession, **kwargs):
+           ...
+
+    This workflow can then be registered::
+
+        scry.workflow.register_workflow(my_workflow)
+
+    """
+
     assert callable(workflow)
 
     if name in _workflows:
