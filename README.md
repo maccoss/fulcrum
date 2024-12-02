@@ -1,4 +1,4 @@
-<img alt="scry logo" src="./static/scry-logo.png" height="128" align="left" style="margin: 8px">
+<img alt="scry logo" src="./docs/_static/scry-logo.png" height="128" align="left" style="margin: 8px">
 
 **Scry** is an in-development search pipeline for extreme-scale proteomics
 experiments. It's based on composable, modular implementations using Spark to
