@@ -3,7 +3,7 @@ scry: Extreme-scale proteomics pipeline
 
 Exports:
 
-- `scry`: programmatic entry point for Scry workflows
+- :py:func:`~scry.scry.scry` -- programmatic entry point for Scry workflows
 """
 
 # Initialize the package.
