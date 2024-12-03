@@ -1,6 +1,6 @@
 <img alt="scry logo" src="./docs/_static/scry-logo.png" height="128" align="left" style="margin: 8px">
 
-**Scry** is an in-development search pipeline for extreme-scale proteomics
+**Scry** is a search pipeline for extreme-scale proteomics
 experiments. It's based on composable, modular implementations using Spark to
 attain near-infinite scalability.
 
@@ -24,7 +24,13 @@ up a cluster, you can install directly from your notebook:
 ```
 
 When invoking Scry you should specify the `SparkSession` in use using the
-`spark` keyword parameter.
+`spark` keyword parameter:
+
+```python
+from scry import scry
+
+scry(spark=spark, **params)
+```
 
 ## Basic Usage  
 
