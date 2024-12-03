@@ -24,7 +24,6 @@ _logger = logging.getLogger(__name__)
     following command:
 
     python -c 'import scry; help(scry.scry)'
-    python -c 'import scry; help(scry.scry)'
     """
 )
 @click.option(

@@ -125,10 +125,14 @@ def write_library(
         If true, include decoy PSMs in the library. Ignored if `threshold_col` is specified.
     peptide_normalizer: dict
         A dict whose `backend` (a `callable`) will be called to
-        normalize each `ModifiedPeptide` value (from `dataset.peptide_column`). Any dict entries
-        other than `backend` will be passed to the callable as keyword arguments. If unspecified
-        or `None` a generic normalizer will be used, which provides a "best-effort" normalization
-        to DIA-NN like Unimod format (e.g. `C(Unimod:4)`) (see :py:func:`.normalize_peptide_heuristic`). A false-y value for `peptide_normalizer`
+        normalize each `ModifiedPeptide` value (from `dataset.peptide_column`).
+
+        Any dict entries other than `backend` will be passed to the callable as keyword arguments.
+
+        If unspecified or `None` a generic normalizer will be used, which provides a "best-effort" normalization
+        to DIA-NN like Unimod format (*e.g.* `C(Unimod:4)`) (see :py:func:`.normalize_peptide_heuristic`).
+
+        A false-y value for `peptide_normalizer`
         or `peptide_normalizer["backend"]` will disable normalization.
 
         TODO: support a registry of available backend normalizers and permit `backend` to be a str
