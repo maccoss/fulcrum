@@ -40,13 +40,22 @@ def quantify_proteins_basic(
 
     In typical usage, the dataset should be filtered to give only confident IDs. For
     convenience, you can provide a `ConfidenceDataset` and specify a `qvalue_threshold`
-    to use only rows with sufficient confidence.
+    to use only rows with sufficient confidence, or specify an appropriate `filter_column`.
 
-    IMPORTANT: the dataset's `protein_column` should give protein group identifiers!
+    To use, run `scry` using the following TOML::
+
+        workflow = "v1"
+
+        [protein_quant]
+        backend = "basic"
+        qvalue_threshold = 0.01
+
+    or invoke :py:func:`scry.scry` with equivalent parameters.
 
     Parameters
     ----------
     dset : PsmIntensityDataset
+        IMPORTANT: the dataset's `protein_column` should give **protein group identifiers**!
     qvalue_threshold : float
         If provided, `dset` will be filtered to the given confidence level before rolling up to the protein level;
         in this case the dataset must be a `ConfidenceDataset`. If `None` no q-value filtering will be performed and

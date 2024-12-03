@@ -73,66 +73,79 @@ def scry_v1(
     Parameters
     ----------
     search: dict, optional
-        Any arguments to pass to the search backend. Notably this will typically include the
-        location(s) of any input samples / files necessary to execute the search.
+        Specifies the backend and arguments that will give intial putative PSMs.
 
-        Special keys:
-        - `backend`: The backend that will compute or read search results. Default: `read_existing`
+        Include a `backend` from the :py:mod:`scry.search` registry (default: :py:func:`~scry.search.read_existing`) or a suitable `callable`.
+
+        Most backends will accept a `location` as a string or list of strings giving the
+        location(s) of files.
 
     airpot: dict, optional
-        Any arguments to pass to `airpot` for rescoring search results.
+        Any arguments to pass to `airpot <https://github.com/seerbio/airpot>`_ for rescoring search results.
 
     cortado: dict, optional
-        Any arguments to pass to `cortado` for confidence estimation on the rescored dataset.
+        Any arguments to pass to `cortado <https://github.com/seerbio/cortado>`_ for confidence estimation on the rescored dataset.
+
+        If `score_column` is unspecified or `None`, uses the first score returned by `airpot`.
+        Defaults to treating larger scores are better; this can be overridden with `desc=True`.
 
     peptide_quant: dict, optional,
-        Any arguments to use for computing PSM quantities.
+        Specifies the backend and arguments to use for computing PSM quantities.
 
-        Special keys:
-        - `backend`: The backend to run. Either the name of the backend, or a callable. Default: `basic`
+        Include a `backend` from the :py:mod:`scry.quant.peptide` registry (default: :py:func:`~scry.quant.peptide.basic`) or a suitable `callable`.
 
     proffer: dict, optional
-        Any arguments to pass to `proffer.infer_spark`. In typical usage, it's strongly recommended to specify
-        a `qvalue_threshold`!
+        Any arguments to pass to `proffer <https://github.com/seerbio/proffer>`_'s `infer_spark()` function.
+
+        In typical usage, it's strongly recommended to specify a `qvalue_threshold` to avoid
+        allow low-confidence results to affect protein inference.
 
     protein_scoring: dict, optional
-        Any arguments to `cortado.protein.score_proteins` for protein scoring and (optinal) confidence estimation.
+        Any arguments to `cortado.protein.score_proteins` for protein scoring.
+
+        For more information, see `cortado's documentation <https://github.com/seerbio/cortado/blob/main/cortado/protein/scoring.py>`_.
 
     protein_rollup: dict, optional
-        Any arguments to use for computing protein quantities.
+        Specifies the backend and arguments to use for computing protein quantities.
 
-        Special keys:
-        - `backend`: The backend to run. Either the name of the backend, or a callable. Default: `basic`
+        Include a `backend` from the :py:mod:`scry.quant.protein` registry (default: :py:func:`~scry.quant.protein.basic`) or a suitable `callable`.
 
     output: dict, optional
         Default parameters for outputting both peptide and protein level results. Parameters given here will
         be overridden by the `peptide_output` or `protein_output` parameter if one or both is specified.
 
-        Special keys:
-        - `backend`: The backend that will write results. Default: `write_parquet`
-           Either a string referring to a backend or plugin, or a `Callable`. If a callable the
-           `ConfidenceDataset` will be passed as the first argument, and any other items in the
-           dict will be passed as keyword arguments.
+        This is convenient for setting a single `backend` or :py:func:`filtering options <scry.output.util.filter_psms>`.
 
     peptide_output: str | dict, optional
         If a string, the location for peptide output, in which case the backend and parameters from `output` will
         be used. If a dict, parameters for output peptide-level results.
 
         Special keys:
-        - `backend`: The backend that will write peptide-level results. Default: `write_parquet`
-           Either a string referring to a backend or plugin, or a `Callable`. If a callable the
+
+        * `backend`: The backend that will write peptide-level results.
+
+           Either a string referring to a backend or plugin from :py:mod:`scry.output` registry, or a `Callable`. If a callable the
            `ConfidenceDataset` will be passed as the first argument, and any other items in the
            dict will be passed as keyword arguments.
+
+           Default: :py:func:`~scry.output.basic.write_parquet`
+
+        * `location`: if only this parameter is included, the backend and parameters from `output` will be used, with the specified location.
 
     protein_output: str | dict, optional
         If a string, the location for protein output, in which case the backend and parameters from `output` will
         be used. If a dict, parameters for output protein-level results.
 
         Special keys:
-        - `backend`: The backend that will write protein-level results. Default: `write_parquet`
-           Either a string referring to a backend or plugin, or a `Callable`. If a callable the
+
+        * `backend`: The backend that will write protein-level results
+           Either a string referring to a backend or plugin from the :py:mod:`scry.output` registry, or a `Callable`. If a callable the
            `ConfidenceDataset` will be passed as the first argument, and any other items in the
            dict will be passed as keyword arguments.
+
+           Default: :py:func:`~scry.output.basic.write_parquet`
+
+        * `location`: if only this parameter is included, the backend and parameters from `output` will be used, with the specified location.
 
     spark: SparkSession, optional
         A Spark session to use when creating the search result dataset. If `None` a session
@@ -140,9 +153,10 @@ def scry_v1(
 
     Returns
     -------
-    Either the results of the `output` module (if `output` is truthy and the backend returns a
-    value other than `None`). If no `output` is specified, or if the output backend returns `None`
-    this workflow will return the results from the `cortado` module.
+    (peptide_result, protein_result) : tuple
+        The returned value from the peptide and protein output backends. If either is `None`,
+        the corresponding result will be a `wheely-mammoth <https://github.com/seerbio/wheely-mammoth>`_ PSM/Protein dataset with intensity and confidence
+        information.
     """
     search = search or dict()
     search_backend = search.pop("backend", "read_existing")

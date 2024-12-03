@@ -28,7 +28,20 @@ def quantify_basic(
     intensity_column: str,
 ) -> PsmIntensityDataset:
     """
-    Basic quantification backend -- just use the specified columns.
+    Basic quantification backend
+
+    Requires that quantities have been previously computed and are available in a dataset column.
+
+    To use, run `scry` using the following TOML::
+
+        workflow = "v1"
+
+        [peptide_quant]
+        backend = "basic"
+        sample_column = "…"
+        intensity_column = "…"
+
+    or invoke :py:func:`scry.scry` with equivalent parameters.
 
     Parameters
     ----------

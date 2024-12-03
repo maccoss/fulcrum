@@ -29,14 +29,15 @@ def write_csv(
     **kwargs,
 ):
     """
-    Write the given dataset to CSV. A thin wrapper around `pyspark.sql.DataFrameWrite.csv`.
+    Write the given dataset to CSV
 
-    Filtering -- If the optional `threshold_col` parameter is provided, only rows where this column
-    is `True` will be included in the output. If `threshold_col` is not specified but the dataset is
-    a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
-    PSMs. Otherwise all target PSMs in the dataset will be included in the output. To include decoys
-    in the output, pass `include_decoys=True` (note: `include_decoys` is ignored if `threshold_col`
-    is specified).
+    A thin wrapper around `pyspark.sql.DataFrameWrite.csv`.
+
+    **Filtering** -- The `qval_thresh` and `include_decoys` parameters allow convenient filtering of output
+    PSMs or proteins.
+
+    For more sophisticated filtering, the optional `threshold_col` parameter includes only rows where this column
+    is `True` in the output. When `threshold_col` is specified the `qval_thresh` and `include_decoys` parameters will be ignored.
 
     Parameters
     ----------
@@ -47,11 +48,11 @@ def write_csv(
     threshold_col: str | pyspark.sql.Column
         (Optional) A column (or its name) specifying which rows will be included in the resulting library.
     qval_thresh: float
-        (Optional) The largest _q_-value accepted into the library. Ignored if the dataset is not a
+        (Optional) The largest *q*-value accepted into the library. Ignored if the dataset is not a
         `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
     include_decoys : bool
-        (Optional) If true, include decoy PSMs in the library. Ignored if `threshold_col` is specified. Default: False
-    **kwargs: additional keyword arguments to pass to `pyspark.sql.DataFrameWrite.csv`.
+        (Optional) If true, include decoy PSMs in the library. Ignored if `threshold_col` is specified. Default: `False`
+    kwargs: additional keyword arguments to pass to `pyspark.sql.DataFrameWrite.csv`.
               Defaults: `{"mode": "errorifexists", "header": True}`
     """
 
@@ -86,12 +87,11 @@ def write_parquet(
     """
     Write the given dataset to Parquet. A thin wrapper around `pyspark.sql.DataFrameWrite.parquet`.
 
-    Filtering -- If the optional `threshold_col` parameter is provided, only rows where this column
-    is `True` will be included in the output. If `threshold_col` is not specified but the dataset is
-    a `wheely.mammoth.ConfidenceDataset` the optional `qval_thresh` parameter will be used to filter
-    PSMs. Otherwise all target PSMs in the dataset will be included in the output. To include decoys
-    in the output, pass `include_decoys=True` (note: `include_decoys` is ignored if `threshold_col`
-    is specified).
+    **Filtering** -- The `qval_thresh` and `include_decoys` parameters allow convenient filtering of output
+    PSMs or proteins.
+
+    For more sophisticated filtering, the optional `threshold_col` parameter includes only rows where this column
+    is `True` in the output. When `threshold_col` is specified the `qval_thresh` and `include_decoys` parameters will be ignored.
 
     Parameters
     ----------
@@ -102,11 +102,11 @@ def write_parquet(
     threshold_col: str | pyspark.sql.Column
         (Optional) A column (or its name) specifying which rows will be included in the resulting library.
     qval_thresh : float
-        (Optional) The largest _q_-value accepted into the library. Ignored if the dataset is not a
+        (Optional) The largest *q*-value accepted into the library. Ignored if the dataset is not a
         `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
     include_decoys : bool
         (Optional) If true, include decoy PSMs in the library. Ignored if `threshold_col` is specified. Default: False
-    **kwargs: additional keyword arguments to pass to `pyspark.sql.DataFrameWrite.parquet`.
+    kwargs: additional keyword arguments to pass to `pyspark.sql.DataFrameWrite.parquet`.
               Defaults: `{"mode": "errorifexists"}`
     """
 
