@@ -54,7 +54,15 @@ def main(
 ):
     """
     CLI for the Scry search pipeline. Parameters should be specified using
-    exactly one of the JSON/TOML options listed below.
+    exactly one of the TOML/JSON options listed below.
+
+    For information on allowed parameters within the TOML/JSON, see
+    :py:func:`scry.scry`, or run the following command:
+
+    .. code:: shell
+
+        python -c 'import scry; help(scry.scry)'
+
     """
 
     set_log_level(verbose, quiet)

@@ -2,7 +2,13 @@
 `scry.scry`: this module contains the main entry point for Scry workflows
 """
 
-from typing import Callable as _Callable, Union as _Union
+from typing import (
+    Any as _Any,
+    Callable as _Callable,
+    Dict as _Dict,
+    Optional as _Optional,
+    Union as _Union,
+)
 import logging as _logging
 
 from pyspark.sql import SparkSession as _SparkSession
@@ -19,6 +25,7 @@ _logger = _logging.getLogger(__name__)
 def scry(
     workflow: _Union[str, _Callable[..., _PsmDataset]] = "v0",
     spark: _SparkSession = None,
+    spark_config: _Optional[_Dict[str, _Any]] = None,
     **kwargs,
 ) -> _PsmDataset:
     """
@@ -32,6 +39,15 @@ def scry(
         For a list of built-in workflows, see :py:mod:`scry.workflow`.
 
         Default: `"v0"`
+    spark: SparkSession, optional
+        A Spark session object that will be passed to the workflow;
+        this session will be used to execute computations in the workflow.
+
+        If unspecified, a Spark session will be created using the config
+        from `spark_config`.
+    spark_config: dict, optional
+        Dictionary of `Spark configuration options <https://spark.apache.org/docs/3.5.1/configuration.html#available-properties>`_ to use when creating a Spark session.
+        Ignored unless `spark` is unspecified or `None`.
     kwargs
         Any keyword arguments are passed directly to the workflow
     """
@@ -41,7 +57,7 @@ def scry(
     if spark is None:
         _builder = _SparkSession.builder.master("local")
 
-        _conf = kwargs.pop("spark_config", {})
+        _conf = spark_config or dict()
         _logger.info("Creating SparkSession with config %s", _conf)
 
         for k, v in _conf.items():
