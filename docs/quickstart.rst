@@ -32,45 +32,12 @@ the ``spark`` keyword parameter:
 
    scry(spark=spark, **params)
 
-Basic Usage
------------
+For more about running Scry in Databricks, see `Python Usage`_.
 
-Python
-~~~~~~
+CLI Usage
+---------
 
-Scry performs most processing with the Spark runtime, so running
-workflows locally will require a Java installation. You may also
-configure a connection to a Spark cluster by providing an appropriate
-``SparkSession`` instance when invoking the API.
-
-The full flexibility of Scry is available through the Python library.
-Usage is similar from a REPL or notebook interface:
-
-.. code:: pycon
-
-   >>> import logging; logging.getLogger().setLevel("INFO")
-   >>> from scry import scry
-   >>> scry(
-   ...   workflow = "v0",
-   ...   search = dict(
-   ...     backend = "read_existing",
-   ...     engine = "encyclopedia",
-   ...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
-   ...   )
-   ... )
-   INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
-   INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
-   INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
-   INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
-   INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
-
-For full documentation, see :py:func:`API Reference <scry.scry.scry>`.
-
-CLI
-~~~
-
-Scry includes a basic CLI that allows access to a subset of the library
-functionality via JSON or TOML parameters:
+Scry includes a CLI that permits running a workflow using TOML parameters:
 
 .. code:: shell
 
@@ -107,3 +74,66 @@ The CLI will accept JSON or TOML as either a string or a file:
 
    # TOML file
    scry --toml-file path/to/file.toml
+
+Configuring Spark
+~~~~~~~~~~~~~~~~~
+
+Scry performs most processing with the Spark runtime, so running
+workflows locally will require a Java installation. You may also
+configure a connection to a Spark cluster by providing an appropriate
+`spark_config` section in the workflow parameters:
+
+.. code :: toml
+
+    [spark_config]
+    "spark.master"="local[*]"
+    "driver.memory"="4g"
+
+Python Usage
+------------
+
+The full flexibility of Scry is available through the Python library's :py:func:`~scry.scry.scry`.
+Usage is similar from a REPL or notebook interface:
+
+.. code:: pycon
+
+   >>> import logging; logging.getLogger().setLevel("INFO")
+   >>> from scry import scry
+   >>> scry(
+   ...   workflow = "v0",
+   ...   search = dict(
+   ...     backend = "read_existing",
+   ...     engine = "encyclopedia",
+   ...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+   ...   )
+   ... )
+   INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+   INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
+   INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+   INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+   INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+
+For full documentation, see :py:func:`API Reference <scry.scry.scry>`.
+
+Configuring Spark
+~~~~~~~~~~~~~~~~~
+
+Scry performs most processing with the Spark runtime, so running
+workflows locally will require a Java installation. You may also
+configure a connection to a Spark cluster by providing an appropriate
+``SparkSession`` instance (or a `spark_config` :py:class:`dict`).
+
+.. code :: python
+
+    scry(
+        spark=spark_session,
+    )
+
+    # OR
+
+    scry(
+        spark_config={
+            "spark.master": "local[*]",
+            "driver.memory": "4g",
+        },
+    )
