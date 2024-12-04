@@ -42,43 +42,52 @@ def scry_v0(
     spark: _SparkSession = None,
 ) -> _ConfidenceDataset:
     """
-    scry_v0: initial experimental workflow
+    Workflow for peptide ID and confidence
+
+    Supports flexible output, such as creating a spectral library.
+
+    To use, call ``scry.scry(workflow="v0")`` or run ``scry`` using the following TOML:
+
+    .. code:: toml
+
+        workflow = "v0"
 
     Parameters
     ----------
-    search: dict, optional
+    search : dict, optional
         Any arguments to pass to the search backend. Notably this will typically include the
         location(s) of any input samples / files necessary to execute the search.
 
         Special keys:
-        - `backend`: The backend that will compute or read search results. Default: `read_existing`
 
-    airpot: dict, optional
-        Any arguments to pass to `airpot` for rescoring search results.
+        * ``backend``: The backend that will compute or read search results. Default: ``read_existing``
 
-    cortado: dict, optional
-        Any arguments to pass to `cortado` for confidence estimation on the rescored dataset.
+    airpot : dict, optional
+        Any arguments to pass to :py:mod:`airpot` for rescoring search results.
 
-    output: str|dict, optional
+    cortado : dict, optional
+        Any arguments to pass to :py:mod:`cortado` for confidence estimation on the rescored dataset.
+
+    output : str|dict, optional
         Any arguments to use for outputting FDR-controlled results. If a string, it will be
-        passed to the `location` keyword of the default backend. If unspecified, None, or empty
+        passed to the ``location`` keyword of the default backend. If unspecified, ``None``, or empty
         no output will be written.
 
         Special keys:
-        - `backend`: The backend that will compute or read search results. Default: `write_csv`
+        - ``backend``: The backend that will compute or read search results. Default: :py:func:`~scry.output.write_csv`
            Either a string referring to a backend or plugin, or a callable. If a callable the
-           `ConfidenceDataset` will be passed as the first argument, and any other items in the
-           dict will be passed as keyword arguments.
+           :py:class:`~wheely.mammoth.ConfidenceDataset` will be passed as the first argument, and any other items in
+           the dict will be passed as keyword arguments.
 
-    spark: SparkSession, optional
-        A Spark session to use when creating the search result dataset. If `None` a session
+    spark : SparkSession, optional
+        A Spark session to use when creating the search result dataset. If ``None`` a session
         will be created with default configuration.
 
     Returns
     -------
-    Either the results of the `output` module (if `output` is truthy and the backend returns a
-    value other than `None`). If no `output` is specified, or if the output backend returns `None`
-    this workflow will return the results from the `cortado` module.
+    Either the results of the ``output`` module (if ``output`` is truthy and the backend returns a
+    value other than ``None``). If no ``output`` is specified, or if the output backend returns ``None``
+    this workflow will return the results from the ``cortado`` module.
     """
     search_backend = search.pop("backend", "read_existing")
     if not callable(search_backend):

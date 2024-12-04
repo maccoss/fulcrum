@@ -2,6 +2,11 @@
 _build
 
 
+# Sphinx generated docs
+docs/_build/
+docs/_autosummary/
+
+
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 

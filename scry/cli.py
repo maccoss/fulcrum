@@ -15,7 +15,17 @@ from .scry import scry
 _logger = logging.getLogger(__name__)
 
 
-@click.command()
+@click.command(
+    help="""
+    CLI for the Scry search pipeline. Parameters should be specified using
+    exactly one of the TOML/JSON options listed below.
+
+    For information on allowed parameters within the TOML/JSON, run the
+    following command:
+
+    python -c 'import scry; help(scry.scry)'
+    """
+)
 @click.option(
     "--param-json", required=False, help="A JSON-encoded parameter string"
 )
@@ -54,7 +64,15 @@ def main(
 ):
     """
     CLI for the Scry search pipeline. Parameters should be specified using
-    exactly one of the JSON/TOML options listed below.
+    exactly one of the TOML/JSON options listed below.
+
+    For information on allowed parameters within the TOML/JSON, see
+    :py:func:`scry.scry`, or run the following command:
+
+    .. code:: shell
+
+        python -c 'import scry; help(scry.scry)'
+
     """
 
     set_log_level(verbose, quiet)

@@ -1,5 +1,5 @@
 """
-`scry.search.registry`: allows registering pluggable backends
+registry for pluggable output backends
 """
 
 import logging as _logging

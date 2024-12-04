@@ -35,27 +35,36 @@ def quantify_proteins_basic(
 ) -> ProteinIntensityDataset:
     """
     Roll up PSM/precursor/peptide intensities to the protein level.
-    This will result in one row per `(dset.sample_column, dset.protein_column)` pair,
-    with the intensity computed by `reduction`.
+    This will result in one row per ``(dset.sample_column, dset.protein_column)`` pair,
+    with the intensity computed by ``reduction``.
 
     In typical usage, the dataset should be filtered to give only confident IDs. For
-    convenience, you can provide a `ConfidenceDataset` and specify a `qvalue_threshold`
-    to use only rows with sufficient confidence.
+    convenience, you can provide a :py:class:`ConfidenceDataset` and specify a ``qvalue_threshold``
+    to use only rows with sufficient confidence, or specify an appropriate ``filter_column``.
 
-    IMPORTANT: the dataset's `protein_column` should give protein group identifiers!
+    To use, run ``scry`` using the following TOML::
+
+        workflow = "v1"
+
+        [protein_quant]
+        backend = "basic"
+        qvalue_threshold = 0.01
+
+    or invoke :py:func:`scry.scry` with equivalent parameters.
 
     Parameters
     ----------
     dset : PsmIntensityDataset
+        IMPORTANT: the dataset's ``protein_column`` should give **protein group identifiers**!
     qvalue_threshold : float
-        If provided, `dset` will be filtered to the given confidence level before rolling up to the protein level;
-        in this case the dataset must be a `ConfidenceDataset`. If `None` no q-value filtering will be performed and
-        all PSMs will be rolled up. This option can be specified in combination with `filter_column`, in which case
-        only rows passing both filters will be rolled up.
+        If provided, ``dset`` will be filtered to the given confidence level before rolling up to the protein level;
+        in this case the dataset must be a :py:class:`ConfidenceDataset`. If ``None`` no q-value filtering will be
+        performed and all PSMs will be rolled up. This option can be specified in combination with ``filter_column``,
+        in which case only rows passing both filters will be rolled up.
     filter_column : str|Column (optional)
-        If provided, `dset` will be filtered to only rows with a true value in the specified column before rolling up
-        to the protein level. If `None` no filtering will be performed. This option can be specified in combination
-        with `qvalue_threshold`, in which case only rows passing both filters will be rolled up.
+        If provided, ``dset`` will be filtered to only rows with a true value in the specified column before rolling up
+        to the protein level. If ``None`` no filtering will be performed. This option can be specified in combination
+        with ``qvalue_threshold``, in which case only rows passing both filters will be rolled up.
     reduction : str
         Either "sum" or "max". Default: "sum"
 
