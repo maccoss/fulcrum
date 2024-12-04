@@ -60,7 +60,9 @@ def scry_v0(
 
         Special keys:
 
-        * ``backend``: The backend that will compute or read search results. Default: ``read_existing``
+        * ``backend``: The backend that will compute or read search results.
+
+          Default: :py:func:`~scry.search.read_existing`
 
     airpot : dict, optional
         Any arguments to pass to :py:mod:`airpot` for rescoring search results.
@@ -74,10 +76,14 @@ def scry_v0(
         no output will be written.
 
         Special keys:
-        - ``backend``: The backend that will compute or read search results. Default: :py:func:`~scry.output.write_csv`
-           Either a string referring to a backend or plugin, or a callable. If a callable the
-           :py:class:`~wheely.mammoth.ConfidenceDataset` will be passed as the first argument, and any other items in
-           the dict will be passed as keyword arguments.
+
+        * ``backend``: The backend that will compute or read search results.
+
+          Either a string referring to a backend or plugin, or a callable. If a callable the
+          :py:class:`~wheely.mammoth.ConfidenceDataset` will be passed as the first argument, and any other items in
+          the dict will be passed as keyword arguments.
+
+          Default: :py:func:`~scry.output.write_csv`
 
     spark : SparkSession, optional
         A Spark session to use when creating the search result dataset. If ``None`` a session
