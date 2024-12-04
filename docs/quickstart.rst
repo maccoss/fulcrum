@@ -14,7 +14,7 @@ You may also need to install Java if you intend to run Scry workflows
 locally.
 
 Using Scry on Databricks
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 Scry is built to quickly run in a Databricks notebook environment. After
 setting up a cluster, you can install directly from your notebook:
