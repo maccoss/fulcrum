@@ -13,7 +13,7 @@ This library requires Python 3.8+ and can be installed with pip:
 You may also need to install Java if you intend to run Scry workflows
 locally.
 
-Installing in Databricks
+Using Scry on Databricks
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Scry is built to quickly run in a Databricks notebook environment. After
@@ -99,18 +99,18 @@ For full documentation, see :py:func:`API Reference <scry.scry.scry>`.
 Configuring Spark
 -----------------
 You may configure a connection to a Spark cluster by providing an appropriate
-`spark_config` section in the workflow parameters:
+``spark_config`` section in the workflow parameters:
 
-.. code :: toml
+.. code:: toml
 
     [spark_config]
     "spark.master"="local[*]"
     "driver.memory"="4g"
 
-When calling Scry from Python, you can either specify a `spark_config` or
-pass a :py:class:`SparkSession` using the `spark` parameter.
+When calling Scry from Python, you can either specify a ``spark_config`` or
+pass a :py:class:`SparkSession` using the ``spark`` parameter.
 
-.. code :: python
+.. code:: python
 
     scry(
         spark=spark_session,
