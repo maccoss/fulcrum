@@ -20,11 +20,12 @@ Scry workflows are configured via TOML/JSON parameters. For example:
 
 .. code :: toml
 
-    workflow = "v1"
+    workflow = "v0"
 
     [search]
     backend = "read_existing"
-    location = ["…"]
+    engine = "encyclopedia"
+    location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
 
 You can pass TOML to the `scry` command line tool in a file:
 
@@ -37,12 +38,13 @@ or as a string:
 .. code :: shell
 
     scry --param-toml '
-    > workflow = "v1"
-    >
-    > [search]
-    > backend="read_existing"
-    > location = ["…"]
-    > '
+    workflow = "v0"
+
+    [search]
+    backend = "read_existing"
+    engine = "encyclopedia"
+    location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
+    '
 
 The same set of parameters are available as keyword arguments when calling :py:func:`~scry.scry.scry`
 from Python:
@@ -50,10 +52,11 @@ from Python:
 .. code :: python
 
     scry.scry(
-        workflow="v1",
+        workflow="v0",
         search=dict(
             backend="read_existing",
-            location=["…"],
+            engine="encyclopedia",
+            location="data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
         ),
     )
 

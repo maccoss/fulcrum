@@ -29,11 +29,12 @@ Python, a :py:class:`dict` with the same structure. For example:
 
 .. code :: toml
 
-    workflow = "v1"
+    workflow = "v0"
 
     [search]
     backend = "read_existing"
-    location = ["…"]
+    engine = "encyclopedia"
+    location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
 
 To learn more about the available workflows and how to configure them,
 see :doc:`workflows`.
