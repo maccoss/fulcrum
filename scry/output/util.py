@@ -44,22 +44,24 @@ def filter_psms(
     """
     Return a dataset containing only filtered PSMs or proteins
 
-    The `qval_thresh` and `include_decoys` parameters allow convenient filtering of output
+    The ``qval_thresh`` and ``include_decoys`` parameters allow convenient filtering of output
     PSMs or proteins.
 
-    For more sophisticated filtering, the optional `threshold_col` parameter includes only rows where this column
-    is `True` in the output. When `threshold_col` is specified the `qval_thresh` and `include_decoys` parameters will be ignored.
+    For more sophisticated filtering, the optional ``threshold_col`` parameter includes only rows where this column
+    is ``True`` in the output. When ``threshold_col`` is specified the ``qval_thresh`` and ``include_decoys`` parameters
+    will be ignored.
 
     Parameters
     ----------
-    dataset: ConfidenceDataset
+    dataset : ConfidenceDataset
         The dataset to write
-    threshold_col: str | pyspark.sql.Column, optional
+    threshold_col : str | pyspark.sql.Column, optional
         A column (or its name) specifying which rows will be included in the resulting library.
-    qval_thresh: float
-        The largest *q*-value accepted into the library. Ignored if the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
-    include_decoys: bool (default: `False`)
-        If true, include decoy PSMs in the library. Ignored if `threshold_col` is specified.
+    qval_thresh : float
+        The largest *q*-value accepted into the library. Ignored if the dataset is not a
+        :py:class:`wheely.mammoth.ConfidenceDataset` or ``threshold_col`` is specified.
+    include_decoys : bool (default: ``False``)
+        If true, include decoy PSMs in the library. Ignored if ``threshold_col`` is specified.
     """
     analyte = (
         "PSM"

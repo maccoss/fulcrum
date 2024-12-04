@@ -30,12 +30,12 @@ def read_existing_results(
     **kwargs,
 ) -> _PsmDataset:
     """
-    read search results with `wheely-mammoth`
+    read search results with ``wheely-mammoth``
 
-    The `engine` parameter specifies the parser or plugin that will be used
-    to read from `location` (a string or list of strings).
+    The ``engine`` parameter specifies the parser or plugin that will be used
+    to read from ``location`` (a string or list of strings).
 
-    To use, run `scry` using the following TOML::
+    To use, run ``scry`` using the following TOML::
 
         [search]
         backend = "read_existing"
@@ -46,13 +46,13 @@ def read_existing_results(
 
     Parameters
     ----------
-    engine: str
+    engine : str
         The search engine format whose result format will be read. The name
-        of a plugin in the `wheely-mamoth` parser registry.
-    location: str, [str]
+        of a plugin in the ``wheely-mamoth`` parser registry.
+    location : str, [str]
         One or more locations from which results should be read. These should
         be local file paths, or URIs understood by Spark.
-    spark: SparkSession, optional
+    spark : SparkSession, optional
         The SparkSession with which to read results / create DataFrames.
         If not specified a session will be created with default settings!
     """

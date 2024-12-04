@@ -33,21 +33,21 @@ def scry(
 
     Parameters
     ----------
-    workflow: str|Callable, optional
+    workflow : str|Callable, optional
         The name of registered workflow, or a callable.
 
         For a list of built-in workflows, see :py:mod:`scry.workflow`.
 
-        Default: `"v0"`
-    spark: SparkSession, optional
+        Default: ``"v0"``
+    spark : SparkSession, optional
         A Spark session object that will be passed to the workflow;
         this session will be used to execute computations in the workflow.
 
         If unspecified, a Spark session will be created using the config
-        from `spark_config`.
-    spark_config: dict, optional
+        from ``spark_config``.
+    spark_config : dict, optional
         Dictionary of `Spark configuration options <https://spark.apache.org/docs/3.5.1/configuration.html#available-properties>`_ to use when creating a Spark session.
-        Ignored unless `spark` is unspecified or `None`.
+        Ignored unless ``spark`` is unspecified or ``None``.
     kwargs
         Any keyword arguments are passed directly to the workflow
     """

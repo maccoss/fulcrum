@@ -32,7 +32,7 @@ def quantify_basic(
 
     Requires that quantities have been previously computed and are available in a dataset column.
 
-    To use, run `scry` using the following TOML::
+    To use, run ``scry`` using the following TOML::
 
         workflow = "v1"
 
@@ -54,8 +54,8 @@ def quantify_basic(
     Returns
     -------
     out : PsmIntensityDataset
-        A dataset with the specified columns annotated. If `dset` is a `ConfidenceDataset` then the result will
-        be a `ProteinIntensityConfidenceDataset`.
+        A dataset with the specified columns annotated. If ``dset`` is a :py:class:`~wheely.mammoth.ConfidenceDataset`
+        then the result will be a :py:class:`ProteinIntensityConfidenceDataset`.
     """
     kwargs = dict(
         sample_column=sample_column,

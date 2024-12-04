@@ -27,7 +27,7 @@ Scry workflows are configured via TOML/JSON parameters. For example:
     engine = "encyclopedia"
     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt"
 
-You can pass TOML to the `scry` command line tool in a file:
+You can pass TOML to the ``scry`` command line tool in a file:
 
 .. code :: shell
 

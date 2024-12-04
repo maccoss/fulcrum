@@ -54,23 +54,23 @@ def write_library(
     """
     Write the given dataset to the given location, formatted for use as a spectral library.
 
-    **Filtering** -- The `qval_thresh` and `include_decoys` parameters allow convenient filtering of output
+    **Filtering** -- The ``qval_thresh`` and ``include_decoys`` parameters allow convenient filtering of output
     PSMs or proteins.
 
-    For more sophisticated filtering, the optional `threshold_col` parameter includes only rows where this column
-    is `True` in the output. When `threshold_col` is specified the `qval_thresh` and `include_decoys` parameters will be ignored.
+    For more sophisticated filtering, the optional ``threshold_col`` parameter includes only rows where this column
+    is ``True`` in the output. When ``threshold_col`` is specified the ``qval_thresh`` and ``include_decoys`` parameters will be ignored.
 
 
     **Spectral information** -- This module is meant to consume scored and filtered sets of PSMs, that
     may not necessarily include the necessary spectral information for creating a library.
     Retrieval of this information is implemented by a pluggable backend implementation from `wheely-mammoth <https://github.com/seerbio/wheely-mammoth/blob/main/wheely/mammoth/spectra/parsers/registry.py>`_ capable of
     fetching the precursor- and fragment-level spectral information for PSMs in a filtered dataset.
-    This is not required if `dataset` implements `SpectraDataset`.
+    This is not required if ``dataset`` implements :py:class:`wheely.mammoth.spectra.SpectraDataset`.
 
     **Output** -- Libraries are written in a TSV format compatible with DIA-NN and EncyclopeDIA, and
     suitable for conversion to other formats using existing tools. For more information see
     `DIA-NN format documentation <https://github.com/vdemichev/DiaNN#spectral-library-formats>`_.
-    Each row represents a single fragment ion in the library. If `output_location` is truthy
+    Each row represents a single fragment ion in the library. If ``output_location`` is truthy
     the library will be written to that location. In all cases, the same dataset is returned by
     this function as a PySpark DataFrame.
 
@@ -78,23 +78,23 @@ def write_library(
 
     These columns are the same for each ion in an entry:
 
-    - `ModifiedPeptide` -- a string representation of the peptide and modifications. This will be
-        taken from the input dataset's `peptide_column` then (optionally) normalized by the
-        specified `peptide_normalizer`.
-    - `PrecursorCharge`
-    - `PrecursorMz`
-    - `Tr_recalibrated` -- The retention time of the ID in an arbitrary scale (possibly all the same
+    - ``ModifiedPeptide`` -- a string representation of the peptide and modifications. This will be
+        taken from the input dataset's ``peptide_column`` then (optionally) normalized by the
+        specified ``peptide_normalizer``.
+    - ``PrecursorCharge``
+    - ``PrecursorMz``
+    - ``Tr_recalibrated`` -- The retention time of the ID in an arbitrary scale (possibly all the same
         value, always numeric)
 
     These columns are specific to each ion in an entry:
 
-    - `ProductMz`
-    - `LibraryIntensity` -- relative intensity of the fragment; guaranteed to be numeric and non-negative
+    - ``ProductMz``
+    - ``LibraryIntensity`` -- relative intensity of the fragment; guaranteed to be numeric and non-negative
 
     Additional columns that will be written conditionally:
 
-    - `QValue` -- *q*-value if the dataset is a `ConfidenceDataset`
-    - `IonMobility` -- currently never written
+    - ``QValue`` -- *q*-value if the dataset is a :py:class:`wheely.mammoth.ConfidenceDataset`
+    - ``IonMobility`` -- currently never written
 
     Currently column names can not be controlled, and are the same regardless of the input dataset
     and its column names, unless noted above.
@@ -111,7 +111,7 @@ def write_library(
     location: str
         The output location (path or URI)
     output_location: DEPRECATED
-        Synonym for `location`
+        Synonym for ``location``
     spectra_backend: str | callable
         The backend implementation used to look up library spectral
         information for each supplied PSM.
@@ -120,22 +120,22 @@ def write_library(
         rows will be included in the resulting library.
     qval_thresh: float; default = 0.01
         The largest *q*-value accepted into the library. Ignored if
-        the dataset is not a `wheely.mammoth.ConfidenceDataset` or `threshold_col` is specified.
+        the dataset is not a :py:class:`wheely.mammoth.ConfidenceDataset` or ``threshold_col`` is specified.
     include_decoys: bool; default = False
-        If true, include decoy PSMs in the library. Ignored if `threshold_col` is specified.
+        If true, include decoy PSMs in the library. Ignored if ``threshold_col`` is specified.
     peptide_normalizer: dict
-        A dict whose `backend` (a `callable`) will be called to
-        normalize each `ModifiedPeptide` value (from `dataset.peptide_column`).
+        A dict whose ``backend`` (a ``Callable``) will be called to
+        normalize each ``ModifiedPeptide`` value (from ``dataset.peptide_column``).
 
-        Any dict entries other than `backend` will be passed to the callable as keyword arguments.
+        Any dict entries other than ``backend`` will be passed to the callable as keyword arguments.
 
-        If unspecified or `None` a generic normalizer will be used, which provides a "best-effort" normalization
-        to DIA-NN like Unimod format (*e.g.* `C(Unimod:4)`) (see :py:func:`.normalize_peptide_heuristic`).
+        If unspecified or ``None`` a generic normalizer will be used, which provides a "best-effort" normalization
+        to DIA-NN like Unimod format (*e.g.* ``C(Unimod:4)``) (see :py:func:`.normalize_peptide_heuristic`).
 
-        A false-y value for `peptide_normalizer`
-        or `peptide_normalizer["backend"]` will disable normalization.
+        A false-y value for ``peptide_normalizer``
+        or ``peptide_normalizer["backend"]`` will disable normalization.
 
-        TODO: support a registry of available backend normalizers and permit `backend` to be a str
+        TODO: support a registry of available backend normalizers and permit ``backend`` to be a str
 
     kwargs:
         Any additional keyword arguments are passed to the spectra_backend callable.
@@ -402,7 +402,7 @@ def _normalize_mod_heuristic(match: _re.Match) -> str:
 
     Parameters
     ----------
-    match: A match object, corresponding to the `_mod_heuristic_pattern`.
+    match: A match object, corresponding to the ``_mod_heuristic_pattern``.
 
     Returns
     -------
@@ -457,24 +457,24 @@ def _normalize_peptides(
     psms: _PsmDataset, backend: _Optional[_Callable] = None, **kwargs
 ) -> _PsmDataset:
     """
-    Normalize each value from `dataset.peptide_column`.
+    Normalize each value from ``dataset.peptide_column``.
 
-    peptide_normalizer (dict; optional): A dict whose `backend` (a `callable`) will be called to
-        Any dict entries
-        other than `backend` will be passed to the callable as keyword arguments.
+    peptide_normalizer (dict; optional): A dict whose ``backend`` (a ``callable``) will be called to
+        Any dict entries other than ``backend`` will be passed to the callable as keyword arguments.
+
     Parameters
     ----------
     psms: The dataset that will be normalized
     backend: A callable that will be passed each peptide value, returning the normalized value.
-        If unspecified or `None` a generic normalizer will be used, which provides a "best-effort"
-        normalization to DIA-NN like Unimod format (e.g. `C(Unimod:4)`). Any other false-y value
+        If unspecified or ``None`` a generic normalizer will be used, which provides a "best-effort"
+        normalization to DIA-NN like Unimod format (e.g. ``C(Unimod:4)``). Any other false-y value
         will disable normalization.
-        TODO: support a registry of available backend normalizers and permit `backend` to be a str
-    kwargs: Any keyword arguments will be passed to each invocation of `backend`.
+        TODO: support a registry of available backend normalizers and permit ``backend`` to be a str
+    kwargs: Any keyword arguments will be passed to each invocation of ``backend``.
 
     Returns
     -------
-    A PSM dataset with the `peptide_column` values normalized by the given backend.
+    A PSM dataset with the ``peptide_column`` values normalized by the given backend.
     """
     if backend is None:
         _backend = normalize_peptide_heuristic
