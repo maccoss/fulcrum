@@ -135,14 +135,14 @@ def scry_v1(
 
         * ``backend``: The backend that will write peptide-level results.
 
-            Either a string referring to a backend or plugin from :py:mod:`scry.output` registry, or a ``Callable``. If a
-            callable the :py:class:`~wheely.mammoth.ConfidenceDataset` will be passed as the first argument, and any
-            other items in the dict will be passed as keyword arguments.
+          Either a string referring to a backend or plugin from :py:mod:`scry.output` registry, or a ``Callable``. If a
+          callable the :py:class:`~wheely.mammoth.PsmDataset` will be passed as the first argument,
+          and any other items in the dict will be passed as keyword arguments.
 
-            Default: :py:func:`~scry.output.basic.write_parquet`
+          Default: :py:func:`~scry.output.basic.write_parquet`
 
         * ``location``: if only this parameter is included, the backend and parameters from ``output`` will be used,
-            with the specified location.
+          with the specified location.
 
     protein_output : str | dict, optional
         If a string, the location for protein output, in which case the backend and parameters from ``output`` will
@@ -151,14 +151,14 @@ def scry_v1(
         Special keys:
 
         * ``backend``: The backend that will write protein-level results
-            Either a string referring to a backend or plugin from the :py:mod:`scry.output` registry, or a ``Callable``.
-            If a callable the :py:class:`~wheely.mammoth.ConfidenceDataset` will be passed as the first argument, and any
-            other items in the dict will be passed as keyword arguments.
+          Either a string referring to a backend or plugin from the :py:mod:`scry.output` registry, or a ``Callable``.
+          If a callable the :py:class:`~wheely.mammoth.proteins.ProteinDataset` will be passed as
+          the first argument, and any other items in the dict will be passed as keyword arguments.
 
-            Default: :py:func:`~scry.output.basic.write_parquet`
+          Default: :py:func:`~scry.output.basic.write_parquet`
 
         * ``location``: if only this parameter is included, the backend and parameters from ``output`` will be used,
-            with the specified location.
+          with the specified location.
 
     spark : SparkSession, optional
         A Spark session to use when creating the search result dataset. If ``None`` a session
