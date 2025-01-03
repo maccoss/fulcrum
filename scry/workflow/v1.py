@@ -441,7 +441,7 @@ def scry_v1(
     prot_out_end = _time()
 
     _logger.info(
-        "Wrote peptide results in %.02f sec",
+        "Wrote protein results in %.02f sec",
         prot_out_end - prot_out_start,
     )
 
