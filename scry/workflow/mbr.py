@@ -331,13 +331,13 @@ def mbr_workflow(
             how="left",
         ).withColumns(
             {
-                "mbr-combined-qvalue": _fns.greatest(
+                "combined-qvalue": _fns.greatest(
                     base_conf.qvalue_column,
                     _fns.col("library-qvalue"),
                 )
             }
         ),
-        qvalue_column="mbr-combined-qvalue",
+        qvalue_column="combined-qvalue",
     )
 
     conf_end = _time()
