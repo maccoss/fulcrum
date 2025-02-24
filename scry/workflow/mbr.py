@@ -243,6 +243,7 @@ def mbr_workflow(
     lib_write_end = _time()
     _logger.info("Wrote library in %.02f sec", lib_write_end - lib_write_start)
 
+    search = search or dict()
     if search.pop("use_library_location", False):
         lib = lib_output.get("location", None)
         _logger.info("Using library location %s for search", lib)
@@ -250,7 +251,6 @@ def mbr_workflow(
         lib = lib_res
         _logger.info("Using library result for search")
 
-    search = search or dict()
     search_backend = search.pop("backend", "read_existing")
     if not callable(search_backend):
         search_backend = _get_search_backend(search_backend)
