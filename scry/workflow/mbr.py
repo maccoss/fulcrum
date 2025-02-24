@@ -359,7 +359,7 @@ def mbr_workflow(
 
     # Get a table of peptides with their group and proteotypicity
     inf_start = _time()
-    inference = _infer_spark(conf, **(proffer or dict()))
+    inference = _infer_spark(firstpass_prec_confs, **(proffer or dict()))
     inf_end = _time()
 
     # The result from Proffer will have list-valued protein groups; we need to join back together IDs
@@ -386,7 +386,16 @@ def mbr_workflow(
             inf_end - inf_start,
         )
 
-    res_inferred = conf.with_data(
+    firstpass_confs_inferred = firstpass_prec_confs.with_data(
+        firstpass_prec_confs.data.join(
+            inference_spark,
+            on=firstpass_prec_confs.peptide_column,
+            how="leftouter",
+        ),
+        protein_column="protein_group",
+        protein_delim=protein_delim,
+    )
+    confs_inferred = conf.with_data(
         conf.data.join(
             inference_spark,
             on=conf.peptide_column,
@@ -400,7 +409,7 @@ def mbr_workflow(
     # TODO: pluggable backends
     prot_conf_start = _time()
     prot_conf = _score_proteins(
-        res_inferred,
+        firstpass_confs_inferred,
         **(protein_scoring or {}),
     )
     prot_conf_end = _time()
@@ -429,7 +438,7 @@ def mbr_workflow(
 
     quant_start = _time()
     pep_quant_dset = quant_backend(
-        res_inferred,
+        confs_inferred,
         **peptide_quant,
     )
     quant_end = _time()
