@@ -2,7 +2,6 @@
 `scry.workflows.mbr`: ID and quantification workflow with 2-pass searching to provide "match-between-runs" (MBR)
 """
 
-from dotdict import dotdict as _dotdict
 import logging as _logging
 from time import time as _time
 from typing import (
@@ -197,7 +196,6 @@ def mbr_workflow(
             ),
         ),
         library,
-        _dotdict,
     )
     _logger.debug(
         "Computed first-pass parameters: %s", _json.dumps(lib_params)
