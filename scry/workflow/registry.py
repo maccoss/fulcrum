@@ -11,6 +11,7 @@ from importlib_metadata import entry_points
 
 from .v0 import scry_v0
 from .v1 import scry_v1
+from .mbr import mbr_workflow
 
 _logger = _logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ _workflows = {
     "scry_v0": scry_v0,
     "v1": scry_v1,
     "scry_v1": scry_v1,
+    "mbr": mbr_workflow,
 }
 _plugins = None
 
