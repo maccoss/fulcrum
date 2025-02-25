@@ -2,6 +2,7 @@
 `scry.workflows.mbr`: ID and quantification workflow with 2-pass searching to provide "match-between-runs" (MBR)
 """
 
+import copy as _copy
 import logging as _logging
 from time import time as _time
 from typing import (
@@ -79,7 +80,19 @@ def mbr_workflow(
     Parameters
     ----------
     library : dict, optional
-        Parameter overrides to apply when creating the first-pass library.
+        Parameters creating the first-pass library. If ``library.workflow`` is unspecified the ``v0`` workflow
+        will be used.
+
+        Currently only basic defaults are provided, meaning many parameters must be specified within ``library``
+        despite corresponding parameters already being specified in this workflow's arguments. This is a known
+        shortcoming for many common use cases and will likely be addressed in a future release.
+
+        It is assumed that the workflow will return a :py:class:`~wheely.mammoth.ConfidenceDataset`
+        of precursors when called without specifying a value for the ``output`` argument.
+        Note that ``library.output`` will not be passed to ``library.workflow``, but instead will be used
+        to separately create a library and pass it to the main search step. Depending on the value
+        of ``search.use_library_location`` either ``library.output.location`` or the result of calling
+        ``library.output.backend`` will be passed to the main search step as the ``library`` argument.
     search : dict, optional
         Specifies the backend and arguments that will give intial putative PSMs.
 
@@ -186,6 +199,9 @@ def mbr_workflow(
     lib_params = _merge_recursive(
         dict(
             workflow="v0",
+            search=_copy.deepcopy(
+                search,
+            ),
             cortado=dict(
                 pep_fdr_type="precursor-only",
             ),
@@ -221,7 +237,7 @@ def mbr_workflow(
         )
 
     # Don't run the output stage for the library; we need access to the pre-output confidence results
-    lib_output = lib_params.pop("output", dict())
+    lib_output = lib_params.pop("output", dict()).copy()
 
     lib_start = _time()
 
