@@ -257,7 +257,10 @@ def mbr_workflow(
     lib_write_end = _time()
     _logger.info("Wrote library in %.02f sec", lib_write_end - lib_write_start)
 
-    search = search or dict()
+    search = _copy.deepcopy(search or dict())
+    search.pop(
+        "library", None
+    )  # remove this parameter if it exists; we'll use the library from the first pass
     if search.pop("use_library_location", False):
         lib = lib_output.get("location", None)
         _logger.info("Using library location %s for search", lib)
