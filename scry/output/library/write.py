@@ -49,6 +49,7 @@ def write_library(
     include_decoys: bool = False,
     peptide_normalizer: _Optional[_Dict[str, _Any]] = None,
     output_location: _Optional[str] = None,
+    use_dbfs_for_s3: _Optional[bool] = None,
     **kwargs,
 ) -> _DataFrame:
     """
@@ -274,10 +275,31 @@ def write_library(
 
     # 4. Write output
     if location:
-        # Repartition to get a single TSV file; this will still produce
-        # an output folder with Spark metadata.
-        if location.startswith("/mnt/"):
-            location = f"/dbfs{location}"
+        if use_dbfs_for_s3:
+            _orig_loc = location
+            if location.startswith("s3://"):
+                location = f"/dbfs/mnt/{location[len('s3://'):]}"
+            elif location.startswith("s3://"):
+                location = f"/dbfs/mnt/{location[len('s3a://'):]}"
+            else:
+                _logger.warning(
+                    "use_dbfs_for_s3: Provided location can't be transformed to DBFS! (%s)",
+                    _orig_loc,
+                )
+
+            _logger.info(
+                "use_dbfs_for_s3: Will write library to %s (for %s)",
+                location,
+                _orig_loc,
+            )
+
+        if location.startswith("dbfs:"):
+            # Normalize DBFS URL for use with Pandas
+            _orig_loc = location
+            location = f"/dbfs{location[len('dbfs:'):]}"
+            _logger.info(
+                "Will write library to %s (for %s)", location, _orig_loc
+            )
 
         # Cast to avoid warning from mypy
         df: _pd.DataFrame = _cast(_pd.DataFrame, output.toPandas())
