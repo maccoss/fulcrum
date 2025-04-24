@@ -516,16 +516,16 @@ def mbr_workflow(
                 (
                     # To match the handling of protein group IDs above, we must join group IDs into strings
                     _fns.array_join(
-                        (
-                            prot_quant_dset.proteins
-                            if prot_quant_dset.protein_delim is None
-                            else _fns.split(
-                                prot_quant_dset.proteins,
-                                prot_quant_dset.protein_delim,
+                        _fns.array_sort(
+                            _fns.array_distinct(
+                                prot_quant_dset.proteins
+                                if prot_quant_dset.protein_delim is None
+                                else _fns.split(
+                                    prot_quant_dset.proteins,
+                                    prot_quant_dset.protein_delim,
+                                )
                             )
-                        )
-                        .list.unique()
-                        .list.sort(),
+                        ),
                         protein_delim,
                     )
                 ).alias(prot_conf.protein_column),
