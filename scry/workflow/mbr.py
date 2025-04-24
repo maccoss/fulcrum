@@ -196,23 +196,31 @@ def mbr_workflow(
         the corresponding result will be a `wheely-mammoth <https://github.com/seerbio/wheely-mammoth>`_ PSM/Protein
         dataset with intensity and confidence information.
     """
-    _proto_search = _copy.deepcopy(search)
-    _proto_search.pop("use_library_location")
-    lib_params = _merge_recursive(
-        dict(
-            workflow="v0",
-            search=_proto_search,
-            cortado=dict(
-                pep_fdr_type="precursor-only",
-            ),
-            output=dict(
-                backend="write_library",
-                qval_thresh=0.01,
-                include_decoys=False,
-            ),
-        ),
-        library,
-    )
+    # Set up defaults
+    library = _copy.deepcopy(library)
+    if "workflow" not in library:
+        library["workflow"] = "v0"
+    if "search" not in library:
+        _search = _copy.deepcopy(search)
+        _search.pop("use_library_location", None)
+        library["search"] = _search
+    if "cortado" not in library or "pep_fdr_type" not in library["cortado"]:
+        library.setdefault("cortado", dict())[
+            "pep_fdr_type"
+        ] = "precursor-only"
+    if "output" not in library:
+        library["output"] = dict(
+            backend="write_library",
+        )
+    if "qval_thresh" not in library["output"]:
+        library["output"]["qval_thresh"] = 0.01
+    if "include_decoys" not in library["output"]:
+        library["output"]["include_decoys"] = False
+    elif library["output"]["include_decoys"]:
+        _logger.warning(
+            "Library output will include decoys; this is not recommended!"
+        )
+
     _logger.debug(
         "Computed first-pass parameters: %s", _json.dumps(lib_params)
     )
@@ -579,43 +587,3 @@ def mbr_workflow(
     prot_res = prot_out_res or protein_result
 
     return pep_res, prot_res
-
-
-def _merge_recursive(a, b, _dict=dict):
-    res = _dict()
-
-    for k, v in a.items():
-        ov = b.get(k, None)
-
-        if ov is not None:
-            if isinstance(v, dict) or isinstance(v, _dict):
-                # Original value is dict -- merge with override value
-                assert isinstance(
-                    ov, dict
-                ), f"Value for `{k}` is not a dict! `{ov}`"
-
-                res[k] = _merge_recursive(v, ov)
-            elif isinstance(ov, dict) or isinstance(ov, _dict):
-                # Original value is not a dict, but override is -- copy override dict
-                res[k] = _dict(ov)
-            else:
-                # Use override value
-                res[k] = ov
-        elif isinstance(v, dict) or isinstance(v, _dict):
-            # No override, but original value is a dict -- copy original dict
-            res[k] = _dict(v)
-        else:
-            # No override, use original value
-            res[k] = v
-
-    # Add additional overrides
-    for k in set(b.keys()) - set(a.keys()):
-        v = b[k]
-
-        if isinstance(v, dict) or isinstance(v, _dict):
-            # Copy value
-            res[k] = _dict(v)
-        else:
-            res[k] = v
-
-    return res
