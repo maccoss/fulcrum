@@ -2,6 +2,7 @@
 `scry.workflows.mbr`: ID and quantification workflow with 2-pass searching to provide "match-between-runs" (MBR)
 """
 
+import copy as _copy
 import logging as _logging
 from time import time as _time
 from typing import (
@@ -21,7 +22,6 @@ from pyspark.sql import (
     functions as _fns,
 )
 
-import scry.workflow.registry
 from airpot import (
     brew as _brew,
     BrewResult as _BrewResult,
@@ -78,8 +78,20 @@ def mbr_workflow(
 
     Parameters
     ----------
-    library : dict, optional
-        Parameter overrides to apply when creating the first-pass library.
+    lib_params : dict, optional
+        Parameters creating the first-pass library. If ``library.workflow`` is unspecified the ``v0`` workflow
+        will be used.
+
+        Currently only basic defaults are provided, meaning many parameters must be specified within ``library``
+        despite corresponding parameters already being specified in this workflow's arguments. This is a known
+        shortcoming for many common use cases and will likely be addressed in a future release.
+
+        It is assumed that the workflow will return a :py:class:`~wheely.mammoth.ConfidenceDataset`
+        of precursors when called without specifying a value for the ``output`` argument.
+        Note that ``library.output`` will not be passed to ``library.workflow``, but instead will be used
+        to separately create a library and pass it to the main search step. Depending on the value
+        of ``search.use_library_location`` either ``library.output.location`` or the result of calling
+        ``library.output.backend`` will be passed to the main search step as the ``library`` argument.
     search : dict, optional
         Specifies the backend and arguments that will give intial putative PSMs.
 
@@ -183,20 +195,34 @@ def mbr_workflow(
         the corresponding result will be a `wheely-mammoth <https://github.com/seerbio/wheely-mammoth>`_ PSM/Protein
         dataset with intensity and confidence information.
     """
-    lib_params = _merge_recursive(
-        dict(
-            workflow="v0",
-            cortado=dict(
-                pep_fdr_type="precursor-only",
-            ),
-            output=dict(
-                backend="write_library",
-                qval_thresh=0.01,
-                include_decoys=False,
-            ),
-        ),
-        library,
-    )
+    # Set up defaults
+    lib_params = _copy.deepcopy(library)
+    if "workflow" not in lib_params:
+        lib_params["workflow"] = "v0"
+    if "search" not in lib_params:
+        _search = _copy.deepcopy(search)
+        _search.pop("use_library_location", None)
+        lib_params["search"] = _search
+    if (
+        "cortado" not in lib_params
+        or "pep_fdr_type" not in lib_params["cortado"]
+    ):
+        lib_params.setdefault("cortado", dict())[
+            "pep_fdr_type"
+        ] = "precursor-only"
+    if "output" not in lib_params:
+        lib_params["output"] = dict(
+            backend="write_lib_params",
+        )
+    if "qval_thresh" not in lib_params["output"]:
+        lib_params["output"]["qval_thresh"] = 0.01
+    if "include_decoys" not in lib_params["output"]:
+        lib_params["output"]["include_decoys"] = False
+    elif lib_params["output"]["include_decoys"]:
+        _logger.warning(
+            "Library output will include decoys; this is not recommended!"
+        )
+
     _logger.debug(
         "Computed first-pass parameters: %s", _json.dumps(lib_params)
     )
@@ -208,7 +234,10 @@ def mbr_workflow(
             lib_workflow,
         )
     if not callable(lib_workflow):
-        lib_workflow = scry.workflow.registry.get_workflow(lib_workflow)
+        # Must avoid circular import
+        from ..workflow import get_workflow as _get_workflow
+
+        lib_workflow = _get_workflow(lib_workflow)
 
     if (
         lib_pep_fdr_type := lib_params.get("cortado", dict()).get(
@@ -221,7 +250,7 @@ def mbr_workflow(
         )
 
     # Don't run the output stage for the library; we need access to the pre-output confidence results
-    lib_output = lib_params.pop("output", dict())
+    lib_output = lib_params.pop("output", dict()).copy()
 
     lib_start = _time()
 
@@ -234,14 +263,18 @@ def mbr_workflow(
 
     lib_output_backend = lib_output.pop("backend")  # default configured above
     if not callable(lib_output_backend):
-        lib_output_backend = scry.output.get_backend(lib_output_backend)
+        lib_output_backend = _get_output_backend(lib_output_backend)
 
     lib_write_start = _time()
     lib_res = lib_output_backend(firstpass_prec_confs, **lib_output)
     lib_write_end = _time()
     _logger.info("Wrote library in %.02f sec", lib_write_end - lib_write_start)
 
-    search = search or dict()
+    search = _copy.deepcopy(search or dict())
+
+    # remove this parameter if it exists; we'll use the library from the first pass
+    search.pop("library", None)
+
     if search.pop("use_library_location", False):
         lib = lib_output.get("location", None)
         _logger.info("Using library location %s for search", lib)
@@ -562,43 +595,3 @@ def mbr_workflow(
     prot_res = prot_out_res or protein_result
 
     return pep_res, prot_res
-
-
-def _merge_recursive(a, b, _dict=dict):
-    res = _dict()
-
-    for k, v in a.items():
-        ov = b.get(k, None)
-
-        if ov is not None:
-            if isinstance(v, dict) or isinstance(v, _dict):
-                # Original value is dict -- merge with override value
-                assert isinstance(
-                    ov, dict
-                ), f"Value for `{k}` is not a dict! `{ov}`"
-
-                res[k] = _merge_recursive(v, ov)
-            elif isinstance(ov, dict) or isinstance(ov, _dict):
-                # Original value is not a dict, but override is -- copy override dict
-                res[k] = _dict(ov)
-            else:
-                # Use override value
-                res[k] = ov
-        elif isinstance(v, dict) or isinstance(v, _dict):
-            # No override, but original value is a dict -- copy original dict
-            res[k] = _dict(v)
-        else:
-            # No override, use original value
-            res[k] = v
-
-    # Add additional overrides
-    for k in set(b.keys()) - set(a.keys()):
-        v = b[k]
-
-        if isinstance(v, dict) or isinstance(v, _dict):
-            # Copy value
-            res[k] = _dict(v)
-        else:
-            res[k] = v
-
-    return res

@@ -8,10 +8,13 @@ to develop new workflows as plugins (for more, see :py:class:`scry.workflow`).
 Built-in Workflows
 ------------------
 
-There are currently two built-in workflows in Scry:
+There are currently three built-in workflows in Scry:
 
-* :py:func:`v0 <scry.workflow.v0.scry_v0>` -- Workflow for identifying precursors and estimating confidence
+* :py:func:`v0 <scry.workflow.v0.scry_v0>` -- Workflow for identifying precursors and estimating confidence, capable of
+  basic analyses or library building
 * :py:func:`v1 <scry.workflow.v1.scry_v1>` -- Workflow for peptide and protein ID and quant
+* :py:func:`mbr <scry.workflow.mbr.mbr_workflow>` -- Workflow for two-pass searching, first building a library then
+  searching with it, including peptide and protein ID and quant
 
 Configuring Workflows
 ---------------------
