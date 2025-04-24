@@ -265,13 +265,16 @@ def scry_v1(
     inference_spark = conf.data.sparkSession.createDataFrame(
         inference.select(
             _pl.col("peptide").alias(conf.peptide_column),
-            _pl.col("protein_group")
-            .list.unique()
-            .list.sort()
-            .list.join(protein_delim),
+            *[
+                _pl.col(c).list.unique().list.sort().list.join(protein_delim)
+                for c in ["protein_group", "all_proteins"]
+                if c in inference.columns
+            ],
             "proteotypic",
         ).to_pandas()
     )
+
+    assert "protein_group" in inference_spark.columns
 
     if _logger.isEnabledFor(_logging.INFO):
         _logger.info(
