@@ -10,5 +10,6 @@ calling :py:func:`register_workflow`.
 
 from .v0 import scry_v0
 from .v1 import scry_v1
+from .mbr import mbr_workflow
 
 from .registry import get_workflow, register_workflow
