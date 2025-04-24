@@ -22,7 +22,6 @@ from pyspark.sql import (
     functions as _fns,
 )
 
-import scry.workflow.registry
 from airpot import (
     brew as _brew,
     BrewResult as _BrewResult,
@@ -235,7 +234,10 @@ def mbr_workflow(
             lib_workflow,
         )
     if not callable(lib_workflow):
-        lib_workflow = scry.workflow.registry.get_workflow(lib_workflow)
+        # Must avoid circular import
+        from scry.workflow import get_workflow as _get_workflow
+
+        lib_workflow = _get_workflow(lib_workflow)
 
     if (
         lib_pep_fdr_type := lib_params.get("cortado", dict()).get(
