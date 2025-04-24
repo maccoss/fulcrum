@@ -235,7 +235,7 @@ def mbr_workflow(
         )
     if not callable(lib_workflow):
         # Must avoid circular import
-        from scry.workflow import get_workflow as _get_workflow
+        from ..workflow import get_workflow as _get_workflow
 
         lib_workflow = _get_workflow(lib_workflow)
 
@@ -263,7 +263,7 @@ def mbr_workflow(
 
     lib_output_backend = lib_output.pop("backend")  # default configured above
     if not callable(lib_output_backend):
-        lib_output_backend = scry.output.get_backend(lib_output_backend)
+        lib_output_backend = _get_output_backend(lib_output_backend)
 
     lib_write_start = _time()
     lib_res = lib_output_backend(firstpass_prec_confs, **lib_output)
