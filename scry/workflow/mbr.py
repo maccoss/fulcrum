@@ -79,7 +79,7 @@ def mbr_workflow(
 
     Parameters
     ----------
-    library : dict, optional
+    lib_params : dict, optional
         Parameters creating the first-pass library. If ``library.workflow`` is unspecified the ``v0`` workflow
         will be used.
 
@@ -197,26 +197,29 @@ def mbr_workflow(
         dataset with intensity and confidence information.
     """
     # Set up defaults
-    library = _copy.deepcopy(library)
-    if "workflow" not in library:
-        library["workflow"] = "v0"
-    if "search" not in library:
+    lib_params = _copy.deepcopy(library)
+    if "workflow" not in lib_params:
+        lib_params["workflow"] = "v0"
+    if "search" not in lib_params:
         _search = _copy.deepcopy(search)
         _search.pop("use_library_location", None)
-        library["search"] = _search
-    if "cortado" not in library or "pep_fdr_type" not in library["cortado"]:
-        library.setdefault("cortado", dict())[
+        lib_params["search"] = _search
+    if (
+        "cortado" not in lib_params
+        or "pep_fdr_type" not in lib_params["cortado"]
+    ):
+        lib_params.setdefault("cortado", dict())[
             "pep_fdr_type"
         ] = "precursor-only"
-    if "output" not in library:
-        library["output"] = dict(
-            backend="write_library",
+    if "output" not in lib_params:
+        lib_params["output"] = dict(
+            backend="write_lib_params",
         )
-    if "qval_thresh" not in library["output"]:
-        library["output"]["qval_thresh"] = 0.01
-    if "include_decoys" not in library["output"]:
-        library["output"]["include_decoys"] = False
-    elif library["output"]["include_decoys"]:
+    if "qval_thresh" not in lib_params["output"]:
+        lib_params["output"]["qval_thresh"] = 0.01
+    if "include_decoys" not in lib_params["output"]:
+        lib_params["output"]["include_decoys"] = False
+    elif lib_params["output"]["include_decoys"]:
         _logger.warning(
             "Library output will include decoys; this is not recommended!"
         )
