@@ -196,12 +196,12 @@ def mbr_workflow(
         the corresponding result will be a `wheely-mammoth <https://github.com/seerbio/wheely-mammoth>`_ PSM/Protein
         dataset with intensity and confidence information.
     """
+    _proto_search = _copy.deepcopy(search)
+    _proto_search.pop("use_library_location")
     lib_params = _merge_recursive(
         dict(
             workflow="v0",
-            search=_copy.deepcopy(
-                search,
-            ),
+            search=_proto_search,
             cortado=dict(
                 pep_fdr_type="precursor-only",
             ),
