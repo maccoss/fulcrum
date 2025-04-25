@@ -441,7 +441,7 @@ def mbr_workflow(
 
     confs_inferred = base_conf.with_data(
         base_conf.data.join(
-            firstpass_confs_inferred.withColumnsRenamed(
+            firstpass_confs_inferred.data.withColumnsRenamed(
                 {
                     firstpass_confs_inferred.peptide_column: base_conf.peptide_column,
                     firstpass_confs_inferred.charges: base_conf.charge_column,
