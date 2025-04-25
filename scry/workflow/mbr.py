@@ -423,54 +423,44 @@ def mbr_workflow(
         desc=desc,
         **cortado,
     )
-    conf = base_conf.with_data(
+
+    conf_end = _time()
+
+    if _logger.isEnabledFor(_logging.INFO):
+        n_confs = base_conf.data.count()
+        _logger.info(
+            "Assigned confidence to %d PSMs or peptides in %.02f sec",
+            n_confs,
+            conf_end - conf_start,
+        )
+        _logger.info(
+            "Found %d PSMs or peptides at %.0f%% FDR",
+            base_conf.data.filter(base_conf.qvalues <= test_fdr).count(),
+            100 * test_fdr,
+        )
+
+    confs_inferred = base_conf.with_data(
         base_conf.data.join(
-            firstpass_prec_confs.data.select(
-                firstpass_prec_confs.peptides.alias(base_conf.peptide_column),
-                firstpass_prec_confs.charges.alias(base_conf.charge_column),
-                firstpass_prec_confs.qvalues.alias("library-qvalue"),
+            firstpass_confs_inferred.withColumnsRenamed(
+                {
+                    firstpass_confs_inferred.peptide_column: base_conf.peptide_column,
+                    firstpass_confs_inferred.charges: base_conf.charge_column,
+                    firstpass_confs_inferred.qvalue_column: "library-qvalue",
+                }
             ),
-            on=[base_conf.peptide_column, base_conf.charge_column],
-            how="left",
+            on=base_conf.peptide_column,
+            how="leftouter",
         ).withColumns(
             {
                 "combined-qvalue": _fns.greatest(
                     base_conf.qvalue_column,
                     _fns.col("library-qvalue"),
-                )
+                ),
             }
-        ),
-        qvalue_column="combined-qvalue",
-    )
-
-    conf_end = _time()
-
-    n_confs = conf.data.count()
-    _logger.info(
-        "Assigned confidence to %d PSMs or peptides in %.02f sec",
-        n_confs,
-        conf_end - conf_start,
-    )
-
-    if _logger.isEnabledFor(_logging.INFO):
-        _logger.info(
-            "Found %d PSMs or peptides at %.0f%% FDR",
-            conf.data.filter(conf.qvalues <= test_fdr).count(),
-            100 * test_fdr,
-        )
-
-    confs_inferred = conf.with_data(
-        conf.data.join(
-            inference_spark.withColumnsRenamed(
-                {
-                    firstpass_prec_confs.peptide_column: conf.peptide_column,
-                }
-            ),
-            on=conf.peptide_column,
-            how="leftouter",
         ),
         protein_column="protein_group",
         protein_delim=protein_delim,
+        qvalue_column="combined-qvalue",
     )
 
     # Quantify peptides after they're annotated with groups, to simplify rollup
