@@ -270,13 +270,85 @@ def mbr_workflow(
     lib_write_end = _time()
     _logger.info("Wrote library in %.02f sec", lib_write_end - lib_write_start)
 
+    # Get a table of peptides with their group and proteotypicity
+    inf_start = _time()
+    inference = _infer_spark(firstpass_prec_confs, **(proffer or dict()))
+    inf_end = _time()
+
+    # The result from Proffer will have list-valued protein groups; we need to join back together IDs
+    # into a single string to get them into Spark via Pandas; ideally this could be avoided by using
+    # Arrow instead as the interchange between Polars and Spark.
+    protein_delim = firstpass_prec_confs.protein_delim or ";"
+    inference_spark = firstpass_prec_confs.data.sparkSession.createDataFrame(
+        inference.select(
+            _pl.col("peptide").alias(firstpass_prec_confs.peptide_column),
+            *[
+                _pl.col(c).list.unique().list.sort().list.join(protein_delim)
+                for c in ["protein_group", "all_proteins"]
+                if c in inference.columns
+            ],
+            "proteotypic",
+        ).to_pandas()
+    )
+
+    assert "protein_group" in inference_spark.columns
+
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Inferred %d protein groups in %.02f sec",
+            inference_spark.select(_fns.countDistinct("protein_group"))
+            .toPandas()
+            .iloc[0, 0],
+            inf_end - inf_start,
+        )
+
+    firstpass_confs_inferred = firstpass_prec_confs.with_data(
+        firstpass_prec_confs.data.join(
+            inference_spark,
+            on=firstpass_prec_confs.peptide_column,
+            how="leftouter",
+        ),
+        protein_column="protein_group",
+        protein_delim=protein_delim,
+    )
+
+    # Compute protein FDR by rescoring protein groups
+    # TODO: pluggable backends
+    prot_conf_start = _time()
+    prot_conf = _score_proteins(
+        firstpass_confs_inferred,
+        **(protein_scoring or {}),
+    )
+    prot_conf_end = _time()
+
+    if _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Scored %d protein groups in %.02f sec",
+            prot_conf.data.count(),
+            prot_conf_end - prot_conf_start,
+        )
+
+    test_fdr = 0.01  # TODO
+    if (
+        c := getattr(prot_conf, "qvalue_column", None)
+    ) is not None and _logger.isEnabledFor(_logging.INFO):
+        _logger.info(
+            "Found %d protein groups at %.0f%% FDR",
+            prot_conf.data.filter(_fns.col(c) <= test_fdr).count(),
+            100 * test_fdr,
+        )
+
     search = _copy.deepcopy(search or dict())
 
     # remove this parameter if it exists; we'll use the library from the first pass
     search.pop("library", None)
-
     if search.pop("use_library_location", False):
         lib = lib_output.get("location", None)
+        if lib is None:
+            raise ValueError(
+                "No library.output.location but search.use_library_location was True!"
+            )
+
         _logger.info("Using library location %s for search", lib)
     else:
         lib = lib_res
@@ -351,118 +423,54 @@ def mbr_workflow(
         desc=desc,
         **cortado,
     )
-    conf = base_conf.with_data(
+
+    conf_end = _time()
+
+    if _logger.isEnabledFor(_logging.INFO):
+        n_confs = base_conf.data.count()
+        _logger.info(
+            "Assigned confidence to %d PSMs or peptides in %.02f sec",
+            n_confs,
+            conf_end - conf_start,
+        )
+        _logger.info(
+            "Found %d PSMs or peptides at %.0f%% FDR",
+            base_conf.data.filter(base_conf.qvalues <= test_fdr).count(),
+            100 * test_fdr,
+        )
+
+    confs_inferred = base_conf.with_data(
         base_conf.data.join(
-            firstpass_prec_confs.data.select(
-                firstpass_prec_confs.peptides.alias(base_conf.peptide_column),
-                firstpass_prec_confs.charges.alias(base_conf.charge_column),
-                firstpass_prec_confs.qvalues.alias("library-qvalue"),
+            firstpass_confs_inferred.data.select(
+                firstpass_confs_inferred.peptides.alias(
+                    base_conf.peptide_column
+                ),
+                firstpass_confs_inferred.charges.alias(
+                    base_conf.charge_column
+                ),
+                firstpass_confs_inferred.qvalues.alias("library-qvalue"),
+                "protein_group",
+                *(
+                    c
+                    for c in ["all_proteins"]
+                    if c in firstpass_confs_inferred.data.columns
+                ),
+                "proteotypic",
             ),
             on=[base_conf.peptide_column, base_conf.charge_column],
-            how="left",
+            how="leftouter",
         ).withColumns(
             {
                 "combined-qvalue": _fns.greatest(
                     base_conf.qvalue_column,
                     _fns.col("library-qvalue"),
-                )
+                ),
             }
         ),
+        protein_column="protein_group",
+        protein_delim=protein_delim,
         qvalue_column="combined-qvalue",
     )
-
-    conf_end = _time()
-
-    n_confs = conf.data.count()
-    _logger.info(
-        "Assigned confidence to %d PSMs or peptides in %.02f sec",
-        n_confs,
-        conf_end - conf_start,
-    )
-
-    test_fdr = 0.01  # TODO
-    if _logger.isEnabledFor(_logging.INFO):
-        _logger.info(
-            "Found %d PSMs or peptides at %.0f%% FDR",
-            conf.data.filter(conf.qvalues <= test_fdr).count(),
-            100 * test_fdr,
-        )
-
-    # Get a table of peptides with their group and proteotypicity
-    inf_start = _time()
-    inference = _infer_spark(firstpass_prec_confs, **(proffer or dict()))
-    inf_end = _time()
-
-    # The result from Proffer will have list-valued protein groups; we need to join back together IDs
-    # into a single string to get them into Spark via Pandas; ideally this could be avoided by using
-    # Arrow instead as the interchange between Polars and Spark.
-    protein_delim = conf.protein_delim or ";"
-    inference_spark = conf.data.sparkSession.createDataFrame(
-        inference.select(
-            _pl.col("peptide").alias(conf.peptide_column),
-            *[
-                _pl.col(c).list.unique().list.sort().list.join(protein_delim)
-                for c in ["protein_group", "all_proteins"]
-                if c in inference.columns
-            ],
-            "proteotypic",
-        ).to_pandas()
-    )
-
-    assert "protein_group" in inference_spark.columns
-
-    if _logger.isEnabledFor(_logging.INFO):
-        _logger.info(
-            "Inferred %d protein groups in %.02f sec",
-            inference_spark.select(_fns.countDistinct("protein_group"))
-            .toPandas()
-            .iloc[0, 0],
-            inf_end - inf_start,
-        )
-
-    firstpass_confs_inferred = firstpass_prec_confs.with_data(
-        firstpass_prec_confs.data.join(
-            inference_spark,
-            on=firstpass_prec_confs.peptide_column,
-            how="leftouter",
-        ),
-        protein_column="protein_group",
-        protein_delim=protein_delim,
-    )
-    confs_inferred = conf.with_data(
-        conf.data.join(
-            inference_spark,
-            on=conf.peptide_column,
-            how="leftouter",
-        ),
-        protein_column="protein_group",
-        protein_delim=protein_delim,
-    )
-
-    # Compute protein FDR by rescoring protein groups
-    # TODO: pluggable backends
-    prot_conf_start = _time()
-    prot_conf = _score_proteins(
-        firstpass_confs_inferred,
-        **(protein_scoring or {}),
-    )
-    prot_conf_end = _time()
-
-    if _logger.isEnabledFor(_logging.INFO):
-        _logger.info(
-            "Scored %d protein groups in %.02f sec",
-            prot_conf.data.count(),
-            prot_conf_end - prot_conf_start,
-        )
-
-    if (
-        c := getattr(prot_conf, "qvalue_column", None)
-    ) is not None and _logger.isEnabledFor(_logging.INFO):
-        _logger.info(
-            "Found %d protein groups at %.0f%% FDR",
-            prot_conf.data.filter(_fns.col(c) <= test_fdr).count(),
-            100 * test_fdr,
-        )
 
     # Quantify peptides after they're annotated with groups, to simplify rollup
     peptide_quant = peptide_quant.copy() if peptide_quant else dict()
@@ -507,15 +515,17 @@ def mbr_workflow(
                 (
                     # To match the handling of protein group IDs above, we must join group IDs into strings
                     _fns.array_join(
-                        (
-                            prot_quant_dset.proteins
-                            if prot_quant_dset.protein_delim is None
-                            else _fns.split(
-                                prot_quant_dset.proteins,
-                                prot_quant_dset.protein_delim,
+                        _fns.array_sort(
+                            _fns.array_distinct(
+                                prot_quant_dset.proteins
+                                if prot_quant_dset.protein_delim is None
+                                else _fns.split(
+                                    prot_quant_dset.proteins,
+                                    prot_quant_dset.protein_delim,
+                                )
                             )
                         ),
-                        prot_conf.protein_delim,
+                        protein_delim,
                     )
                 ).alias(prot_conf.protein_column),
                 prot_quant_dset.samples,
@@ -523,7 +533,8 @@ def mbr_workflow(
             ),
             on=prot_conf.protein_column,
             how="leftouter",
-        )
+        ),
+        protein_delim=protein_delim,
     )
 
     # Output peptide results
