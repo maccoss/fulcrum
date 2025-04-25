@@ -444,7 +444,7 @@ def mbr_workflow(
             firstpass_confs_inferred.data.withColumnsRenamed(
                 {
                     firstpass_confs_inferred.peptide_column: base_conf.peptide_column,
-                    firstpass_confs_inferred.charges: base_conf.charge_column,
+                    firstpass_confs_inferred.charge_column: base_conf.charge_column,
                     firstpass_confs_inferred.qvalue_column: "library-qvalue",
                 }
             ),
