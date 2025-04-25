@@ -457,7 +457,7 @@ def mbr_workflow(
                 ),
                 "proteotypic",
             ),
-            on=base_conf.peptide_column,
+            on=[base_conf.peptide_column, base_conf.charge_column],
             how="leftouter",
         ).withColumns(
             {
