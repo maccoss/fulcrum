@@ -78,7 +78,7 @@ def mbr_workflow(
 
     Parameters
     ----------
-    lib_params : dict, optional
+    library : dict, optional
         Parameters creating the first-pass library. If ``library.workflow`` is unspecified the ``v0`` workflow
         will be used.
 
@@ -261,7 +261,7 @@ def mbr_workflow(
         "Ran first-pass search and scoring in %.02f sec", lib_end - lib_start
     )
 
-    lib_output_backend = lib_output.pop("backend")  # default configured above
+    lib_output_backend = lib_output.pop("backend", "write_library")
     if not callable(lib_output_backend):
         lib_output_backend = _get_output_backend(lib_output_backend)
 
