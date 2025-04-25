@@ -441,12 +441,21 @@ def mbr_workflow(
 
     confs_inferred = base_conf.with_data(
         base_conf.data.join(
-            firstpass_confs_inferred.data.withColumnsRenamed(
-                {
-                    firstpass_confs_inferred.peptide_column: base_conf.peptide_column,
-                    firstpass_confs_inferred.charge_column: base_conf.charge_column,
-                    firstpass_confs_inferred.qvalue_column: "library-qvalue",
-                }
+            firstpass_confs_inferred.data.select(
+                firstpass_confs_inferred.peptides.alias(
+                    base_conf.peptide_column
+                ),
+                firstpass_confs_inferred.charges.alias(
+                    base_conf.charge_column
+                ),
+                firstpass_confs_inferred.qvalues.alias("library-qvalue"),
+                "protein_group",
+                *(
+                    c
+                    for c in ["all_proteins"]
+                    if c in firstpass_confs_inferred.data.columns
+                ),
+                "proteotypic",
             ),
             on=base_conf.peptide_column,
             how="leftouter",
