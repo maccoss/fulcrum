@@ -279,7 +279,7 @@ def write_library(
             _orig_loc = location
             if location.startswith("s3://"):
                 location = f"/dbfs/mnt/{location[len('s3://'):]}"
-            elif location.startswith("s3://"):
+            elif location.startswith("s3a://"):
                 location = f"/dbfs/mnt/{location[len('s3a://'):]}"
             else:
                 _logger.warning(
