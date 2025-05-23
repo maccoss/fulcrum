@@ -42,5 +42,5 @@ def get_filtered_intensities(
     return _fns.when(
         (qvalues <= qval_thresh)
         & (dataset.targets | _fns.lit(include_decoys)),
-        dataset.intensites,
+        dataset.intensities,
     ).otherwise(_fns.lit(None))
