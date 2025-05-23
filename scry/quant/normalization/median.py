@@ -29,7 +29,14 @@ class MedianNormalizer(BasicNormalizer):
         """
         Return a :py:class:`~pyspark.sql.Column` that computes median normalization.
 
-        IMPORTANT: currently NO FILTERING is applied to the dataset when computing medians!!
+        Parameters
+        ----------
+        dataset : PsmIntensityDataset
+            The dataset to normalize.
+        qval_thresh : float, optional
+            If specified, the median will be computed from only PSMs with *q*-values less than or equal to this value.
+        include_decoys : bool, optional
+            If ``False`` (default), the median will be computed from only target PSMs.
         """
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
