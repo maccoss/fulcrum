@@ -19,6 +19,9 @@ class MedianNormalizer(BasicNormalizer):
     Computes median normalization
     """
 
+    def __init__(self):
+        self.__name__ = "median"
+
     def get_normalized_column(
         self,
         dataset: _PsmIntensityDataset,
