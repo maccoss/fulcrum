@@ -11,6 +11,7 @@ from pyspark.sql import (
 from wheely.mammoth import PsmIntensityDataset as _PsmIntensityDataset
 
 from .base import BasicNormalizer
+from .util import get_filtered_intensities as _get_filtered_intensities
 
 
 class MedianNormalizer(BasicNormalizer):
@@ -19,7 +20,11 @@ class MedianNormalizer(BasicNormalizer):
     """
 
     def get_normalized_column(
-        self, dataset: _PsmIntensityDataset, *_
+        self,
+        dataset: _PsmIntensityDataset,
+        *_,
+        qval_thresh=None,
+        include_decoys=False,
     ) -> _Column:
         """
         Return a :py:class:`~pyspark.sql.Column` that computes median normalization.
@@ -29,10 +34,19 @@ class MedianNormalizer(BasicNormalizer):
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
 
+        if qval_thresh is not None:
+            intensities = _get_filtered_intensities(
+                dataset,
+                qval_thresh=qval_thresh,
+                include_decoys=include_decoys,
+            )
+        else:
+            intensities = dataset.intensities
+
         return (
             dataset.intensities
-            / _fns.median(dataset.intensity_column).over(
+            / _fns.median(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
-            * _fns.median(dataset.intensity_column)
+            * _fns.median(intensities)
         )
