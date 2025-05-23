@@ -59,5 +59,9 @@ class MedianNormalizer(BasicNormalizer):
                 _Window.partitionBy(dataset.samples)
             )
             # Scale value globally; the exact value is unimportant, so use an efficient estimate
-            * _fns.percentile_approx(intensities, 0.5, 1000)
+            * _fns.percentile_approx(intensities, 0.5, 1000).over(
+                _Window.rowsBetween(
+                    _Window.unboundedPreceding, _Window.unboundedFollowing
+                )
+            )
         )
