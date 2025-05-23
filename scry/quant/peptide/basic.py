@@ -96,8 +96,8 @@ def quantify_basic(
             norm_backend = normalization
             normalization = dict()
 
-        if not callable(normalization):
-            norm_backend = _get_normalization_backend(normalization)
+        if not callable(norm_backend):
+            norm_backend = _get_normalization_backend(norm_backend)
 
         res = norm_backend(res, **normalization)
 
