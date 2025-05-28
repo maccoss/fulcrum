@@ -15,8 +15,15 @@ from wheely.mammoth import PsmIntensityDataset as _PsmIntensityDataset
 
 
 class Normalizer:
-    def __call__(self):
-        raise NotImplementedError("Normalizer can not be used directly! Create an instance of a subclass!")
+    def __call__(
+        self,
+        dataset: _PsmIntensityDataset,
+        *args,
+        **kwargs,
+    ) -> _PsmIntensityDataset:
+        raise NotImplementedError(
+            "Normalizer can not be used directly! Create an instance of a subclass!"
+        )
 
 
 class BasicNormalizer(Normalizer):
@@ -26,8 +33,14 @@ class BasicNormalizer(Normalizer):
     this will be included in the returned dataset appropriately.
     """
 
+    def __init__(self):
+        self.__name__ = __name__
+
     def __call__(
-        self, dataset: _PsmIntensityDataset, *args, **kwargs
+        self,
+        dataset: _PsmIntensityDataset,
+        *args,
+        **kwargs,
     ) -> _PsmIntensityDataset:
         """
         Call this normalizer on the given dataset.
