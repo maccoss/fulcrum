@@ -14,8 +14,9 @@ from pyspark.sql import Column as _Column
 from wheely.mammoth import PsmIntensityDataset as _PsmIntensityDataset
 
 
-class Normalizer(_Callable):
-    pass
+class Normalizer:
+    def __call__(self):
+        raise NotImplementedError("Normalizer can not be used directly! Create an instance of a subclass!")
 
 
 class BasicNormalizer(Normalizer):
