@@ -4,6 +4,11 @@
 
 from typing import (
     overload as _overload,
+    Any as _Any,
+    Callable as _Callable,
+    Mapping as _Mapping,
+    Optional as _Optional,
+    Union as _Union,
 )
 
 from wheely.mammoth import (
@@ -12,6 +17,8 @@ from wheely.mammoth import (
     PsmIntensityDataset,
     PsmIntensityConfidenceDataset,
 )
+
+from ..normalization import get_backend as _get_normalization_backend
 
 
 @_overload  # type: ignore[misc]
@@ -26,6 +33,9 @@ def quantify_basic(
     dset: PsmDataset,
     sample_column: str,
     intensity_column: str,
+    normalization: _Optional[
+        _Union[str, _Callable, _Mapping[str, _Any]]
+    ] = None,
 ) -> PsmIntensityDataset:
     """
     Basic quantification backend
@@ -50,6 +60,9 @@ def quantify_basic(
         The name of the column giving sample IDs
     intensity_column : str
         The name of the column giving PSM intensities
+    normalization : str | callable | dict (optional)
+        Either a normalization backend name, a normalization callable, or a dict with a ``backend`` (name or callable)
+        and optional ``kwargs``. If not provided, no normalization will be applied.
 
     Returns
     -------
@@ -75,5 +88,17 @@ def quantify_basic(
         res = PsmIntensityConfidenceDataset(dset.data, **kwargs)
     else:
         res = PsmIntensityDataset(dset.data, **kwargs)
+
+    if normalization is not None:
+        if isinstance(normalization, dict):
+            norm_backend = normalization.pop("backend")
+        else:
+            norm_backend = normalization
+            normalization = dict()
+
+        if not callable(norm_backend):
+            norm_backend = _get_normalization_backend(norm_backend)
+
+        res = norm_backend(res, **normalization)
 
     return res

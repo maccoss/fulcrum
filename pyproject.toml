@@ -64,5 +64,17 @@ ignore_missing_imports = true
 module = "wheely.mammoth.parsers"
 ignore_missing_imports = true
 [[tool.mypy.overrides]]
+module = "wheely.mammoth.parsers.registry"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
 module = "wheely.mammoth.proteins"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "wheely.mammoth.spectra"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "wheely.mammoth.spectra.parsers.registry"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "wheely.mammoth.spectra.utils"
 ignore_missing_imports = true
