@@ -74,6 +74,7 @@ def quantify_basic(
         sample_column=sample_column,
         intensity_column=intensity_column,
         peptide_column=dset.peptide_column,
+        charge_column=dset.charge_column,
         spectrum_columns=dset.spectrum_columns,
         score_columns=dset.score_columns,
         target_column=dset.target_column,

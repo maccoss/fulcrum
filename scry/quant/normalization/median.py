@@ -99,6 +99,9 @@ class MedianDenseNormalizer(MedianNormalizer):
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
 
+        if getattr(dataset, "charge_column", None) is None:
+            raise TypeError("MedianDenseNormalizer requires a charge_column!")
+
         intensities = _get_filtered_intensities(
             dataset,
             qval_thresh=qval_thresh if qval_thresh is not None else 1.0,
