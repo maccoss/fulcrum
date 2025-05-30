@@ -55,7 +55,7 @@ def _get_plugins():
 
 def get_backend(name):
     """Fetch a backend with the given name."""
-    global _backends, _plugins
+    global _plugins
     try:
         return _backends[name]
     except KeyError as e:
