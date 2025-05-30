@@ -50,21 +50,21 @@ class MedianNormalizer(BasicNormalizer):
             include_decoys=include_decoys,
         )
 
+        global_median = dataset.data.select(
+            intensities.alias("intensity")
+        ).approxQuantile("intensity", [0.5], relativeError=0.001)[0]
+
         return (
             dataset.intensities
             / _fns.median(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
             # Scale value globally; the exact value is unimportant, so use an efficient estimate
-            * _fns.percentile_approx(intensities, 0.5, 1000).over(
-                _Window.rowsBetween(
-                    _Window.unboundedPreceding, _Window.unboundedFollowing
-                )
-            )
+            * _fns.lit(global_median)
         )
 
 
-class MedianDenseNormalizer(MedianNormalizer):
+class MedianDenseNormalizer(BasicNormalizer):
     """
     Computes median normalization
     """
@@ -122,15 +122,15 @@ class MedianDenseNormalizer(MedianNormalizer):
             intensities,
         ).otherwise(_fns.lit(None))
 
+        global_median = dataset.data.select(
+            intensities.alias("intensity")
+        ).approxQuantile("intensity", [0.5], relativeError=0.001)[0]
+
         return (
             dataset.intensities
             / _fns.median(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
             # Scale value globally; the exact value is unimportant, so use an efficient estimate
-            * _fns.percentile_approx(intensities, 0.5, 1000).over(
-                _Window.rowsBetween(
-                    _Window.unboundedPreceding, _Window.unboundedFollowing
-                )
-            )
+            * _fns.lit(global_median)
         )
