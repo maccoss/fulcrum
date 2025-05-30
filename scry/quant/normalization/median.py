@@ -108,14 +108,17 @@ class MedianDenseNormalizer(MedianNormalizer):
             include_decoys=include_decoys,
         )
 
+        n_samples = (
+            dataset.data.select(_fns.countDistinct(dataset.samples))
+            .toPandas()
+            .iloc[0, 0]
+        )
+
         intensities = _fns.when(
             _fns.count(dataset.samples).over(
                 _Window.partitionBy(dataset.peptides, dataset.charges)
             )
-            >= density_thresh
-            * dataset.select(_fns.countDistinct(dataset.samples))
-            .toPandas()
-            .iloc[0, 0],
+            >= density_thresh * n_samples,
             intensities,
         ).otherwise(_fns.lit(None))
 
