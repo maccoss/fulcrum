@@ -8,12 +8,13 @@ import logging as _logging
 # be used like so -> from importlib.metadata import entry_points
 from importlib_metadata import entry_points
 
-from .median import MedianNormalizer
+from .median import MedianNormalizer, MedianDenseNormalizer
 
 _logger = _logging.getLogger(__name__)
 
 _backends = {
     "median": MedianNormalizer(),
+    "mediandense": MedianDenseNormalizer(),
 }
 _plugins = None
 
