@@ -73,7 +73,7 @@ def _get_plugins():
 
 def get_workflow(name):
     """Fetch a workflow with the given name."""
-    global _workflows, _plugins
+    global _plugins
     try:
         return _workflows[name]
     except KeyError as e:
