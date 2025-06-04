@@ -197,7 +197,7 @@ def write_library(
         joined_df = norm_psms.data
 
         peptide_col = norm_psms.peptide_column
-        decoy_col = norm_psms.decoy_column
+        target_col = norm_psms.target_column
 
         charge_col = norm_psms.charge_column
         mz_col = norm_psms.mz_column
@@ -227,7 +227,7 @@ def write_library(
         )
 
         peptide_col = f"psms.{norm_psms.peptide_column}"
-        decoy_col = f"psms.{norm_psms.decoy_column}"
+        target_col = f"psms.{norm_psms.target_column}"
 
         charge_col = f"spectra.{spectra.charge_column}"
         mz_col = f"spectra.{spectra.mz_column}"
@@ -252,7 +252,7 @@ def write_library(
             _fns.col(charge_col).cast("integer").alias("PrecursorCharge"),
             _fns.col(mz_col).alias("PrecursorMz"),
             _fns.col(rt_col).alias("Tr_recalibrated"),
-            _fns.col(decoy_col).cast("boolean").alias("decoy"),
+            (~_fns.col(target_col).cast("boolean")).alias("decoy"),
             # We must select this up front, it will be aliased into the correct position below
             *(
                 [_fns.col("psms." + dataset.qvalue_column).alias("__qvalue")]
