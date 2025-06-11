@@ -167,6 +167,7 @@ def test_write_library(request, dataset_fixture, spectra_backend):
         "ModifiedPeptide",
         "PrecursorCharge",
         "PrecursorMz",
+        "decoy",
         "ProductMz",
     ]:
         assert col in result.columns
@@ -209,6 +210,7 @@ def test_write_library_spectradataset(
         "ModifiedPeptide",
         "PrecursorCharge",
         "PrecursorMz",
+        "decoy",
         "ProductMz",
     ]:
         assert col in result.columns
