@@ -28,6 +28,7 @@ class MedianNormalizer(BasicNormalizer):
         *_,
         qval_thresh=None,
         include_decoys=False,
+        global_scaling_relative_error: float = 0.001,
     ) -> _Column:
         """
         Return a :py:class:`~pyspark.sql.Column` that computes median normalization.
@@ -40,6 +41,10 @@ class MedianNormalizer(BasicNormalizer):
             If specified, the median will be computed from only PSMs with *q*-values less than or equal to this value.
         include_decoys : bool, optional
             If ``False`` (default), the median will be computed from only target PSMs.
+        global_scaling_relative_error : float, optional
+            The relative error allowed when estimating the global scaling factor applied to normalized intensities.
+            Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`.
+            Default: 0.001
         """
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
@@ -50,16 +55,23 @@ class MedianNormalizer(BasicNormalizer):
             include_decoys=include_decoys,
         )
 
+        # After scaling intensities to the median, we will scale them globally to maintain the same
+        # overall magnitude of the intensities. The exact value used for global scaling is unimportant,
+        # so we use an efficient estimate of the overall median, with accuracy controlled by the
+        # `global_scaling_relative_error` parameter.
         global_median = dataset.data.select(
             intensities.alias("intensity")
-        ).approxQuantile("intensity", [0.5], relativeError=0.001)[0]
+        ).approxQuantile(
+            "intensity", [0.5], relativeError=global_scaling_relative_error
+        )[
+            0
+        ]
 
         return (
             dataset.intensities
             / _fns.median(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
-            # Scale value globally; the exact value is unimportant, so use an efficient estimate
             * _fns.lit(global_median)
         )
 
@@ -80,6 +92,7 @@ class MedianDenseNormalizer(BasicNormalizer):
         qval_thresh=None,
         include_decoys=False,
         density_thresh: float = 0.8,
+        global_scaling_relative_error: float = 0.001,
     ) -> _Column:
         """
         Return a :py:class:`~pyspark.sql.Column` that computes median normalization using only precursors with a density
@@ -95,6 +108,10 @@ class MedianDenseNormalizer(BasicNormalizer):
             If ``False`` (default), the median will be computed from only target PSMs.
         density_thresh : float, optional
             The density level required for precursors to be used for normalization. Default: 0.8
+        global_scaling_relative_error : float, optional
+            The relative error allowed when estimating the global scaling factor applied to normalized intensities.
+            Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`.
+            Default: 0.001
         """
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
@@ -122,15 +139,22 @@ class MedianDenseNormalizer(BasicNormalizer):
             intensities,
         ).otherwise(_fns.lit(None))
 
+        # After scaling intensities to the median, we will scale them globally to maintain the same
+        # overall magnitude of the intensities. The exact value used for global scaling is unimportant,
+        # so we use an efficient estimate of the overall median, with accuracy controlled by the
+        # `global_scaling_relative_error` parameter.
         global_median = dataset.data.select(
             intensities.alias("intensity")
-        ).approxQuantile("intensity", [0.5], relativeError=0.001)[0]
+        ).approxQuantile(
+            "intensity", [0.5], relativeError=global_scaling_relative_error
+        )[
+            0
+        ]
 
         return (
             dataset.intensities
             / _fns.median(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
-            # Scale value globally; the exact value is unimportant, so use an efficient estimate
             * _fns.lit(global_median)
         )
