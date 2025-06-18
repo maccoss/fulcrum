@@ -60,7 +60,8 @@ class BasicNormalizer(Normalizer):
                 norm_col_name,
                 self.get_normalized_column(dataset, *args, **kwargs),
             ),
-            intensity_columns=[*dataset.intensity_columns, norm_col_name],
+            intensity_column=norm_col_name,
+            intensity_columns=[norm_col_name, *dataset.intensity_columns],
         )
 
     def get_normalized_column(
