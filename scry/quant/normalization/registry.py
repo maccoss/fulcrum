@@ -11,6 +11,8 @@ from importlib_metadata import entry_points
 from .median import (
     run_median_normalization as median,
     run_mediandense_normalization as mediandense,
+    run_median_approx_normalization as median_approx,
+    run_mediandense_approx_normalization as mediandense_approx,
 )
 
 _logger = _logging.getLogger(__name__)
@@ -18,10 +20,19 @@ _logger = _logging.getLogger(__name__)
 _backends = {
     "median": median,
     "mediandense": mediandense,
+    "median_approx": median_approx,
+    "mediandense_approx": mediandense_approx,
 }
 _plugins = None
 
-__all__ = ["register_backend", "get_backend", "median", "mediandense"]
+__all__ = [
+    "register_backend",
+    "get_backend",
+    "median",
+    "mediandense",
+    "median_approx",
+    "mediandense_approx",
+]
 
 
 def register_backend(name, backend, clobber=False):

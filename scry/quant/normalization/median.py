@@ -36,6 +36,7 @@ class MedianNormalizer(BasicNormalizer):
         qval_thresh=None,
         include_decoys=False,
         global_scaling_relative_error: float = 0.001,
+        **kwargs,
     ) -> _Column:
         """
         Return a :py:class:`~pyspark.sql.Column` that computes median normalization.
@@ -52,6 +53,8 @@ class MedianNormalizer(BasicNormalizer):
             The relative error allowed when estimating the global scaling factor applied to normalized intensities.
             Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`.
             Default: 0.001
+        kwargs : dict
+            Additional keyword arguments. Passed to :py:func:`get_median_column`.
         """
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
@@ -76,7 +79,7 @@ class MedianNormalizer(BasicNormalizer):
 
         return (
             dataset.intensities
-            / self.get_median_column(intensities).over(
+            / self.get_median_column(intensities, **kwargs).over(
                 _Window.partitionBy(dataset.samples)
             )
             * _fns.lit(global_median)
@@ -123,6 +126,72 @@ def run_median_normalization(
     return MedianNormalizer()(dataset, *args, **kwargs)
 
 
+class MedianApproxNormalizer(MedianNormalizer):
+    """
+    Computes median normalization using an approximate median.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.__name__ = "median_approx"
+
+    def get_median_column(
+        self, intensity_col: _Column, median_approx_relative_error=0.0001
+    ) -> _Column:
+        """
+        Return a :py:class:`~pyspark.sql.Column` that computes the approximate median of the given intensity column.
+
+        Parameters
+        ----------
+        intensity_col : pyspark.sql.Column
+            The column containing the intensities for which to compute the median.
+        median_approx_relative_error : float, optional
+            The relative error allowed when estimating the median. Default: 0.0001
+        """
+        return _fns.percentile_approx(
+            intensity_col,
+            0.5,
+            accuracy=int(1.0 / median_approx_relative_error),
+        )
+
+
+def run_median_approx_normalization(
+    dataset: _PsmIntensityDataset,
+    *args,
+    **kwargs,
+) -> _PsmIntensityDataset:
+    """
+    Apply median normalization to a :py:class:`~wheely.mammoth.PsmIntensityDataset`.
+
+    This function normalizes intensities in the dataset by dividing each intensity by the median intensity for its sample,
+    then scales all normalized intensities by a global median to preserve the overall intensity magnitude.
+
+    When computing per-sample medians, this function uses an approximate median to improve performance. The accuracy
+    of this approximation can be controlled with the `median_approx_relative_error` parameter. Larger values will improve
+    performance at the cost of accuracy.
+
+    Parameters
+    ----------
+    dataset : PsmIntensityDataset
+        The dataset to normalize.
+    qval_thresh : float, optional
+        If specified, the median is computed from only PSMs with *q*-values less than or equal to this value.
+    include_decoys : bool, optional
+        If ``False`` (default), the median is computed from only target PSMs.
+    global_scaling_relative_error : float, optional
+        The relative error allowed when estimating the global scaling factor applied to normalized intensities.
+        Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`. Default: 0.001
+    median_approx_relative_error : float, optional
+        The relative error allowed when estimating the median. Default: 0.0001
+
+    Returns
+    -------
+    PsmIntensityDataset
+        A new dataset with normalized intensities.
+    """
+    return MedianApproxNormalizer()(dataset, *args, **kwargs)
+
+
 class MedianDenseNormalizer(MedianNormalizer):
     """
     Computes median normalization
@@ -140,6 +209,7 @@ class MedianDenseNormalizer(MedianNormalizer):
         include_decoys=False,
         density_thresh: float = 0.8,
         global_scaling_relative_error: float = 0.001,
+        **kwargs,
     ) -> _Column:
         """
         Return a :py:class:`~pyspark.sql.Column` that computes median normalization using only precursors with a density
@@ -159,6 +229,8 @@ class MedianDenseNormalizer(MedianNormalizer):
             The relative error allowed when estimating the global scaling factor applied to normalized intensities.
             Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`.
             Default: 0.001
+        kwargs : dict
+            Additional keyword arguments. Passed to :py:func:`get_median_column`.
         """
         if _:
             raise TypeError("Unsupported: additional positional arguments!")
@@ -200,7 +272,7 @@ class MedianDenseNormalizer(MedianNormalizer):
 
         return (
             dataset.intensities
-            / self.get_median_column(intensities).over(
+            / self.get_median_column(intensities, **kwargs).over(
                 _Window.partitionBy(dataset.samples)
             )
             * _fns.lit(global_median)
@@ -237,3 +309,72 @@ def run_mediandense_normalization(
         A new dataset with normalized intensities.
     """
     return MedianDenseNormalizer()(dataset, *args, **kwargs)
+
+
+class MedianDenseApproxNormalizer(MedianDenseNormalizer):
+    """
+    Computes median normalization using an approximate median.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.__name__ = "mediandense_approx"
+
+    def get_median_column(
+        self, intensity_col: _Column, median_approx_relative_error=0.0001
+    ) -> _Column:
+        """
+        Return a :py:class:`~pyspark.sql.Column` that computes the approximate median of the given intensity column.
+
+        Parameters
+        ----------
+        intensity_col : pyspark.sql.Column
+            The column containing the intensities for which to compute the median.
+        median_approx_relative_error : float, optional
+            The relative error allowed when estimating the median. Default: 0.0001
+        """
+        return _fns.percentile_approx(
+            intensity_col,
+            0.5,
+            accuracy=int(1.0 / median_approx_relative_error),
+        )
+
+
+def run_mediandense_approx_normalization(
+    dataset: _PsmIntensityDataset,
+    *args,
+    **kwargs,
+) -> _PsmIntensityDataset:
+    """
+    Apply median normalization using only precursors with sufficient detection density to a :py:class:`~wheely.mammoth.PsmIntensityDataset`.
+
+    This function normalizes intensities in the dataset by dividing each intensity by the median intensity for its sample,
+    computed using only precursors detected in at least a fraction `density_thresh` of samples. All normalized
+    intensities are then scaled by a global median to preserve the overall intensity magnitude.
+
+    When computing per-sample medians, this function uses an approximate median to improve performance. The accuracy
+    of this approximation can be controlled with the `median_approx_relative_error` parameter. Larger values will improve
+    performance at the cost of accuracy.
+
+    Parameters
+    ----------
+    dataset : PsmIntensityDataset
+        The dataset to normalize.
+    qval_thresh : float, optional
+        If specified, the median is computed from only PSMs with *q*-values less than or equal to this value.
+    include_decoys : bool, optional
+        If ``False`` (default), the median is computed from only target PSMs.
+    density_thresh : float, optional
+        The density level required for precursors to be used for normalization. Default: 0.8
+    global_scaling_relative_error : float, optional
+        The relative error allowed when estimating the global scaling factor applied to normalized intensities.
+        Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`. Default: 0.001
+    median_approx_relative_error : float, optional
+        The relative error allowed when estimating the median. Default: 0.0001
+
+    Returns
+    -------
+    PsmIntensityDataset
+        A new dataset with normalized intensities.
+    """
+    return MedianDenseApproxNormalizer()(dataset, *args, **kwargs)
