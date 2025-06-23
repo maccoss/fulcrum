@@ -16,8 +16,12 @@ from .util import get_filtered_intensities as _get_filtered_intensities
 __all__ = [
     "run_median_normalization",
     "run_mediandense_normalization",
+    "run_median_approx_normalization",
+    "run_mediandense_approx_normalization",
     "MedianNormalizer",
     "MedianDenseNormalizer",
+    "MedianApproxNormalizer",
+    "MedianDenseApproxNormalizer",
 ]
 
 
