@@ -76,11 +76,21 @@ class MedianNormalizer(BasicNormalizer):
 
         return (
             dataset.intensities
-            / _fns.median(intensities).over(
+            / self.get_median_column(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
             * _fns.lit(global_median)
         )
+
+    def get_median_column(self, intensity_col: _Column) -> _Column:
+        """
+        Return a :py:class:`~pyspark.sql.Column` that computes the median of the given intensity column.
+
+        This method is called by `get_normalized_column`, and the result's `over()` method is used to construct
+        an appropriate window function for median normalization. To change the median computation, override this
+        method in a subclass.
+        """
+        return _fns.median(intensity_col)
 
 
 def run_median_normalization(
@@ -113,7 +123,7 @@ def run_median_normalization(
     return MedianNormalizer()(dataset, *args, **kwargs)
 
 
-class MedianDenseNormalizer(BasicNormalizer):
+class MedianDenseNormalizer(MedianNormalizer):
     """
     Computes median normalization
     """
@@ -190,7 +200,7 @@ class MedianDenseNormalizer(BasicNormalizer):
 
         return (
             dataset.intensities
-            / _fns.median(intensities).over(
+            / self.get_median_column(intensities).over(
                 _Window.partitionBy(dataset.samples)
             )
             * _fns.lit(global_median)
