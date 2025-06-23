@@ -5,6 +5,9 @@ Note that any ``callable`` can be used as a backend!
 These classes only simplify certain common use cases.
 """
 
+from collections.abc import (
+    Callable as _abc_Callable,
+)
 from typing import (
     Callable as _Callable,
 )
@@ -14,7 +17,7 @@ from pyspark.sql import Column as _Column
 from wheely.mammoth import PsmIntensityDataset as _PsmIntensityDataset
 
 
-class Normalizer:
+class Normalizer(_abc_Callable):
     def __call__(
         self,
         dataset: _PsmIntensityDataset,

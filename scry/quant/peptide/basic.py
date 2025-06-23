@@ -61,8 +61,9 @@ def quantify_basic(
     intensity_column : str
         The name of the column giving PSM intensities
     normalization : str | callable | dict (optional)
-        Either a normalization backend name, a normalization callable, or a dict with a ``backend`` (name or callable)
-        and optional ``kwargs``. If not provided, no normalization will be applied.
+        Either a normalization backend name (from :py:class:`scry.quant.normalization.registry`), a normalization
+        callable, or a dict with a ``backend`` (name or callable) and optional ``kwargs``.
+        If not provided, no normalization will be applied.
 
     Returns
     -------

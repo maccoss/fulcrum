@@ -8,15 +8,20 @@ import logging as _logging
 # be used like so -> from importlib.metadata import entry_points
 from importlib_metadata import entry_points
 
-from .median import MedianNormalizer, MedianDenseNormalizer
+from .median import (
+    run_median_normalization as median,
+    run_mediandense_normalization as mediandense,
+)
 
 _logger = _logging.getLogger(__name__)
 
 _backends = {
-    "median": MedianNormalizer(),
-    "mediandense": MedianDenseNormalizer(),
+    "median": median,
+    "mediandense": mediandense,
 }
 _plugins = None
+
+__all__ = ["register_backend", "get_backend", "median", "mediandense"]
 
 
 def register_backend(name, backend, clobber=False):
