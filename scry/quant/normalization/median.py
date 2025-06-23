@@ -13,6 +13,13 @@ from wheely.mammoth import PsmIntensityDataset as _PsmIntensityDataset
 from .base import BasicNormalizer
 from .util import get_filtered_intensities as _get_filtered_intensities
 
+__all__ = [
+    "run_median_normalization",
+    "run_mediandense_normalization",
+    "MedianNormalizer",
+    "MedianDenseNormalizer",
+]
+
 
 class MedianNormalizer(BasicNormalizer):
     """
@@ -74,6 +81,36 @@ class MedianNormalizer(BasicNormalizer):
             )
             * _fns.lit(global_median)
         )
+
+
+def run_median_normalization(
+    dataset: _PsmIntensityDataset,
+    *args,
+    **kwargs,
+) -> _PsmIntensityDataset:
+    """
+    Apply median normalization to a :py:class:`~wheely.mammoth.PsmIntensityDataset`.
+
+    This function normalizes intensities in the dataset by dividing each intensity by the median intensity for its sample, then scales all normalized intensities by a global median to preserve the overall intensity magnitude.
+
+    Parameters
+    ----------
+    dataset : PsmIntensityDataset
+        The dataset to normalize.
+    qval_thresh : float, optional
+        If specified, the median is computed from only PSMs with *q*-values less than or equal to this value.
+    include_decoys : bool, optional
+        If ``False`` (default), the median is computed from only target PSMs.
+    global_scaling_relative_error : float, optional
+        The relative error allowed when estimating the global scaling factor applied to normalized intensities.
+        Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`. Default: 0.001
+
+    Returns
+    -------
+    PsmIntensityDataset
+        A new dataset with normalized intensities.
+    """
+    return MedianNormalizer()(dataset, *args, **kwargs)
 
 
 class MedianDenseNormalizer(BasicNormalizer):
@@ -158,3 +195,35 @@ class MedianDenseNormalizer(BasicNormalizer):
             )
             * _fns.lit(global_median)
         )
+
+
+def run_mediandense_normalization(
+    dataset: _PsmIntensityDataset,
+    *args,
+    **kwargs,
+) -> _PsmIntensityDataset:
+    """
+    Apply median normalization using only precursors with sufficient detection density to a :py:class:`~wheely.mammoth.PsmIntensityDataset`.
+
+    This function normalizes intensities in the dataset by dividing each intensity by the median intensity for its sample, computed using only precursors detected in at least a fraction `density_thresh` of samples. All normalized intensities are then scaled by a global median to preserve the overall intensity magnitude.
+
+    Parameters
+    ----------
+    dataset : PsmIntensityDataset
+        The dataset to normalize.
+    qval_thresh : float, optional
+        If specified, the median is computed from only PSMs with *q*-values less than or equal to this value.
+    include_decoys : bool, optional
+        If ``False`` (default), the median is computed from only target PSMs.
+    density_thresh : float, optional
+        The density level required for precursors to be used for normalization. Default: 0.8
+    global_scaling_relative_error : float, optional
+        The relative error allowed when estimating the global scaling factor applied to normalized intensities.
+        Passed to :py:func:`pyspark.sql.DataFrame.approxQuantile`. Default: 0.001
+
+    Returns
+    -------
+    PsmIntensityDataset
+        A new dataset with normalized intensities.
+    """
+    return MedianDenseNormalizer()(dataset, *args, **kwargs)
