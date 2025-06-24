@@ -106,7 +106,7 @@ def quantify_proteins_directlfq(
     def estimate_udf(pdf: _pd.DataFrame) -> _pd.DataFrame:
         # Pivot to wide format: index=peptide/precursor, columns=sample, values=intensity
         wide = pdf.pivot_table(
-            index=pep_col,
+            index=[prot_col, pep_col],
             columns=samp_col,
             values=inten_col,
             aggfunc="first",
