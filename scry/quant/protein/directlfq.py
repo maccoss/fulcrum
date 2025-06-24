@@ -110,13 +110,16 @@ def quantify_proteins_directlfq(
             fill_value=None,  # keep NaN for missing
         )
 
+        # Replace zeros with NaN before log transform to avoid log(0)
+        wide.replace(0, _np.nan, inplace=True)
+
+        # Apply log2 transformation - DirectLFQ expects log2-transformed input
+        wide = _np.log2(wide)
+
         # Name index levels appropriately for DirectLFQ
         wide.index.set_names(
             [_lfq_config.PROTEIN_ID, _lfq_config.PROTEIN_ID], inplace=True
         )
-
-        # Replace zeros with NaN
-        wide.replace(0, _np.nan, inplace=True)
 
         # Skip additional work
         _lfq_config.set_compile_normalized_ion_table(False)
