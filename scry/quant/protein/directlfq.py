@@ -113,6 +113,11 @@ def quantify_proteins_directlfq(
             fill_value=None,  # keep NaN for missing
         )
 
+        # Name index levels appropriately for DirectLFQ
+        wide.index.set_names(
+            [_lfq_config.PROTEIN_ID, _lfq_config.PROTEIN_ID], inplace=True
+        )
+
         # Replace zeros with NaN
         wide.replace(0, _np.nan, inplace=True)
 
@@ -126,7 +131,8 @@ def quantify_proteins_directlfq(
 
         # Convert wide to long format using stack (faster than melt)
         protein_long = (
-            protein_df.rename({_lfq_config.PROTEIN_ID: prot_col})
+            protein_df.reset_index()
+            .rename({_lfq_config.PROTEIN_ID: prot_col})
             .set_index(prot_col)
             .stack()
             .reset_index()
