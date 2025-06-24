@@ -96,12 +96,19 @@ def quantify_proteins_directlfq(
         ]
     )
 
+    # Get the column names from the dataset; these will be used in the UDF
+    pep_col = dset.peptide_column
+    samp_col = dset.sample_column
+    inten_col = dset.intensity_column
+    prot_col = dset.protein_column
+    tgt_col = dset.target_column
+
     def estimate_udf(pdf: _pd.DataFrame) -> _pd.DataFrame:
         # Pivot to wide format: index=peptide/precursor, columns=sample, values=intensity
         wide = pdf.pivot_table(
-            index=dset.peptide_column,
-            columns=dset.sample_column,
-            values=dset.intensity_column,
+            index=pep_col,
+            columns=samp_col,
+            values=inten_col,
             aggfunc="first",
             fill_value=None,  # keep NaN for missing
         )
@@ -118,17 +125,15 @@ def quantify_proteins_directlfq(
         )
 
         # Convert wide to long format using stack (faster than melt)
-        protein_long = (
-            protein_df.set_index(dset.protein_column).stack().reset_index()
-        )
+        protein_long = protein_df.set_index(prot_col).stack().reset_index()
         protein_long.columns = [
-            dset.protein_column,
-            dset.sample_column,
+            prot_col,
+            samp_col,
             "directlfq_intensity",
         ]
 
         # Add target column (max for group)
-        protein_long[dset.target_column] = pdf[dset.target_column].max()
+        protein_long[tgt_col] = pdf[tgt_col].max()
 
         return protein_long
 
