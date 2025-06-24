@@ -125,7 +125,12 @@ def quantify_proteins_directlfq(
         )
 
         # Convert wide to long format using stack (faster than melt)
-        protein_long = protein_df.set_index(prot_col).stack().reset_index()
+        protein_long = (
+            protein_df.rename({_lfq_config.PROTEIN_ID: prot_col})
+            .set_index(prot_col)
+            .stack()
+            .reset_index()
+        )
         protein_long.columns = [
             prot_col,
             samp_col,
