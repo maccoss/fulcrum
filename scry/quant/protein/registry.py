@@ -9,11 +9,13 @@ import logging as _logging
 from importlib_metadata import entry_points
 
 from .basic import quantify_proteins_basic
+from .directlfq import quantify_proteins_directlfq
 
 _logger = _logging.getLogger(__name__)
 
 _backends = {
     "basic": quantify_proteins_basic,
+    "directlfq": quantify_proteins_directlfq,
 }
 _plugins = None
 
