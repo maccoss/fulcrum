@@ -3,9 +3,6 @@
 """
 
 from typing import (
-    Callable as _Callable,
-    Literal as _Literal,
-    Optional as _Optional,
     Union as _Union,
 )
 
@@ -129,21 +126,19 @@ def quantify_proteins_directlfq(
             wide, min_nonan=1, num_samples_quadratic=10, num_cores=1
         )
 
-        # Convert wide to long format using stack (faster than melt)
-        protein_long = (
-            protein_df.reset_index()
-            .rename({_lfq_config.PROTEIN_ID: prot_col})
-            .set_index(prot_col)
-            .stack()
-            .reset_index()
+        protein_df.rename(
+            columns={_lfq_config.PROTEIN_ID: prot_col}, inplace=True
         )
-        protein_long.columns = [
-            prot_col,
-            samp_col,
-            "directlfq_intensity",
-        ]
 
-        # Add target column (max for group)
+        # Convert wide to long format using melt
+        protein_long = _pd.melt(
+            protein_df,
+            id_vars=[prot_col],
+            var_name=samp_col,
+            value_name="directlfq_intensity",
+        )
+
+        # Add target column (max for group) -- any group with a target peptide is a target protein
         protein_long[tgt_col] = pdf[tgt_col].max()
 
         return protein_long
