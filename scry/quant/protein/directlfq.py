@@ -143,8 +143,10 @@ def quantify_proteins_directlfq(
 
         return protein_long
 
-    df_agg = dset.data.groupBy(dset.protein_column).applyInPandas(
-        estimate_udf, schema
+    df_agg = (
+        dset.data.groupBy(dset.protein_column)
+        .applyInPandas(estimate_udf, schema)
+        .cache()  # cache to avoid recomputation
     )
 
     return ProteinIntensityDataset(
