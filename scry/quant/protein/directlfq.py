@@ -144,7 +144,7 @@ def quantify_proteins_directlfq(
     return ProteinIntensityDataset(
         df_agg,
         sample_column=dset.sample_column,
-        intensity_column="intensity",
+        intensity_column="directlfq_intensity",
         protein_column=dset.protein_column,
         protein_delim=dset.protein_delim,
         target_column=dset.target_column,
