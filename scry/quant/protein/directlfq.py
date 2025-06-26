@@ -2,6 +2,7 @@
 `scry.quant.protein.directlfq` -- quantification backend that runs DirectLFQ on each protein group
 """
 
+import logging
 from typing import (
     Union as _Union,
 )
@@ -29,6 +30,8 @@ from wheely.mammoth import (
 from wheely.mammoth.proteins import (
     ProteinIntensityDataset,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 def quantify_proteins_directlfq(
@@ -123,7 +126,7 @@ def quantify_proteins_directlfq(
         # Also check for negative values which would cause log transformation to fail
         wide_is_neg = wide < 0
         if (wide_is_neg).any().any():
-            logging.warning(
+            _logger.warning(
                 f"Negative intensity values found for {pdf[prot_col].iloc[0]}"
             )
             wide[wide_is_neg] = _np.nan
