@@ -123,8 +123,8 @@ def quantify_proteins_directlfq(
         # Also check for negative values which would cause log transformation to fail
         wide_is_neg = wide < 0
         if (wide_is_neg).any().any():
-            print(
-                f"Warning: Negative intensity values found for {pdf[prot_col].iloc[0]}"
+            logging.warning(
+                f"Negative intensity values found for {pdf[prot_col].iloc[0]}"
             )
             wide[wide_is_neg] = _np.nan
 
