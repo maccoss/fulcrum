@@ -160,12 +160,12 @@ def quantify_proteins_directlfq(
             columns={_lfq_config.PROTEIN_ID: prot_col}, inplace=True
         )
 
-        # Convert wide to long format using melt
-        protein_long = _pd.melt(
-            protein_df,
-            id_vars=[prot_col],
-            var_name=samp_col,
-            value_name="directlfq_intensity",
+        # Convert wide to long format efficiently with stack()
+        protein_long = (
+            protein_df.set_index(prot_col)
+            .stack()
+            .reset_index()
+            .rename(columns={"level_1": samp_col, 0: "directlfq_intensity"})
         )
 
         # Add target column (max for group) -- any group with a target peptide is a target protein
