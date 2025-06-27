@@ -2,6 +2,7 @@
 `scry.quant.protein.directlfq` -- quantification backend that runs DirectLFQ on each protein group
 """
 
+import logging
 from typing import (
     Union as _Union,
 )
@@ -29,6 +30,8 @@ from wheely.mammoth import (
 from wheely.mammoth.proteins import (
     ProteinIntensityDataset,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 def quantify_proteins_directlfq(
@@ -110,15 +113,36 @@ def quantify_proteins_directlfq(
             fill_value=None,  # keep NaN for missing
         )
 
+        # Check if we have any non-zero values before proceeding
+        if wide.empty:
+            # Return empty dataframe with correct columns
+            return _pd.DataFrame(
+                columns=[prot_col, samp_col, "directlfq_intensity", tgt_col]
+            )
+
         # Replace zeros with NaN before log transform to avoid log(0)
         wide.replace(0, _np.nan, inplace=True)
+
+        # Also check for negative values which would cause log transformation to fail
+        wide_is_neg = wide < 0
+        if (wide_is_neg).any().any():
+            _logger.warning(
+                f"Negative intensity values found for {pdf[prot_col].iloc[0]}"
+            )
+            wide[wide_is_neg] = _np.nan
+
+        # Check if we have any valid values to process
+        if wide.notna().sum().sum() == 0:
+            return _pd.DataFrame(
+                columns=[prot_col, samp_col, "directlfq_intensity", tgt_col]
+            )
 
         # Apply log2 transformation - DirectLFQ expects log2-transformed input
         wide = _np.log2(wide)
 
         # Name index levels appropriately for DirectLFQ
         wide.index.set_names(
-            [_lfq_config.PROTEIN_ID, _lfq_config.PROTEIN_ID], inplace=True
+            [_lfq_config.PROTEIN_ID, _lfq_config.QUANT_ID], inplace=True
         )
 
         # Skip additional work
@@ -129,16 +153,22 @@ def quantify_proteins_directlfq(
             wide, min_nonan=1, num_samples_quadratic=10, num_cores=1
         )
 
+        # If we got an empty result, return empty dataframe
+        if protein_df.empty:
+            return _pd.DataFrame(
+                columns=[prot_col, samp_col, "directlfq_intensity", tgt_col]
+            )
+
         protein_df.rename(
             columns={_lfq_config.PROTEIN_ID: prot_col}, inplace=True
         )
 
-        # Convert wide to long format using melt
-        protein_long = _pd.melt(
-            protein_df,
-            id_vars=[prot_col],
-            var_name=samp_col,
-            value_name="directlfq_intensity",
+        # Convert wide to long format efficiently with stack()
+        protein_long = (
+            protein_df.set_index(prot_col)
+            .stack()
+            .reset_index()
+            .rename(columns={"level_1": samp_col, 0: "directlfq_intensity"})
         )
 
         # Add target column (max for group) -- any group with a target peptide is a target protein
