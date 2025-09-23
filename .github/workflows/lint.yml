@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   lint:
-    runs-on: [self-hosted, X64]
+    runs-on: [self-hosted, X64, aws-master]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
