@@ -216,12 +216,6 @@ def mbr_workflow(
         )
     if "qval_thresh" not in lib_params["output"]:
         lib_params["output"]["qval_thresh"] = 0.01
-    if "include_decoys" not in lib_params["output"]:
-        lib_params["output"]["include_decoys"] = False
-    elif lib_params["output"]["include_decoys"]:
-        _logger.warning(
-            "Library output will include decoys; this is not recommended!"
-        )
 
     _logger.debug(
         "Computed first-pass parameters: %s", _json.dumps(lib_params)
