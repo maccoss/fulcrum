@@ -103,7 +103,7 @@ def set_log_level(verbose: int, quiet: int):
         logging.DEBUG,
     ]
 
-    logging.basicConfig(level=_lvls[_def - quiet + verbose])
+    logging.basicConfig(level=_lvls[_def - quiet + verbose], force=True)
 
 
 def _parse_args(
