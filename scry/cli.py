@@ -113,26 +113,25 @@ def set_log_level(verbose: int, quiet: int):
 
     logging.basicConfig(level=get_level(level), force=True)
 
-    # Now override some particularly verbose loggers at certain levels
-    # This has the effect of essentially adding a level beyond DEBUG
-    # (accessible by adding more -v flags) at which these highly-verbose
-    # logs are enabled.
+    # Now override some particularly verbose loggers at certain levels.
+    # This has the effect of essentially adding a level beyond DEBUG (accessible
+    # by adding more -v flags) at which these highly-verbose logs are enabled.
 
     if level >= _lvls.index(logging.INFO):
-        # py4j is somewhat verbose at info level (and more so at debug); force it an extra step quieter
-        # Its INFO level will be available at -vv (DEBUG) and its DEBUG level at -vvv (beyond DEBUG)
-        logging.getLogger("py4j").setLevel(get_level(level - 1))
+        # py4j is somewhat verbose at info level (and more so at debug); force it an extra step quieter.
+        # Its INFO level will be available at -vvv (beyond DEBUG) and its DEBUG level at -vvvv (further beyond DEBUG)
+        logging.getLogger("py4j").setLevel(get_level(level - 2))
 
-        # directlfq is very verbose at info level; force it three steps quieter
+        # directlfq is very verbose at info level; force it two steps quieter.
         # Its INFO level will be available at -vvv (beyond DEBUG)
-        logging.getLogger("directlfq").setLevel(get_level(level - 3))
+        logging.getLogger("directlfq").setLevel(get_level(level - 2))
 
     if level >= _lvls.index(logging.DEBUG):
-        # numba is very verbose at debug level; force an extra step quieter
+        # numba is very verbose at debug level; force an extra step quieter.
         # Its DEBUG level will be available at -vvv (beyond DEBUG)
         logging.getLogger("numba").setLevel(get_level(level - 1))
 
-        # proffer is very verbose at debug level; force an extra step quieter
+        # proffer is very verbose at debug level; force an extra step quieter.
         # Its DEBUG level will be available at -vvv (beyond DEBUG)
         logging.getLogger("proffer").setLevel(get_level(level - 1))
 
