@@ -7,8 +7,6 @@ from typing import (
     Union as _Union,
 )
 
-from directlfq import config as _lfq_config
-from directlfq.protein_intensity_estimation import estimate_protein_intensities
 import numpy as _np
 import pandas as _pd
 from pyspark.sql import (
@@ -103,6 +101,10 @@ def quantify_proteins_directlfq(
     prot_col = dset.protein_column
     tgt_col = dset.target_column
 
+    # Get the current log level of the directlfq logger from the outer execution context
+    # so we can apply it inside the UDF.
+    directlfq_log_level = logging.getLogger("directlfq").getEffectiveLevel()
+
     def estimate_udf(pdf: _pd.DataFrame) -> _pd.DataFrame:
         # Pivot to wide format: index=peptide/precursor, columns=sample, values=intensity
         wide = pdf.pivot_table(
@@ -136,6 +138,17 @@ def quantify_proteins_directlfq(
             return _pd.DataFrame(
                 columns=[prot_col, samp_col, "directlfq_intensity", tgt_col]
             )
+
+        # Import directlfq here (inside the UDF), as we would like to override its logging configuration
+        from directlfq import config as _lfq_config
+
+        _lfq_config.setup_logging = lambda *_, **__: ()
+
+        from directlfq.protein_intensity_estimation import (
+            estimate_protein_intensities,
+        )
+
+        logging.getLogger("directlfq").setLevel(directlfq_log_level)
 
         # Apply log2 transformation - DirectLFQ expects log2-transformed input
         wide = _np.log2(wide)
