@@ -55,7 +55,7 @@ def scry(
         workflow = _get_workflow(workflow)
 
     if spark is None:
-        _builder = _SparkSession.builder.master("local")
+        _builder = _SparkSession.builder.master("local[*]")
 
         _conf = spark_config or dict()
         _logger.info("Creating SparkSession with config %s", _conf)
