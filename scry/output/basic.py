@@ -21,6 +21,55 @@ _logger = _logging.getLogger(__name__)
 
 
 def write_csv(
+    peptides: _PsmDataset,
+    proteins: _Optional[_ProteinDataset],
+    threshold_col: _Optional[_Union[str, _Column]] = None,
+    qval_thresh: float = None,
+    include_decoys: bool = False,
+    peptide_kwargs: _Optional[dict] = None,
+    protein_kwargs: _Optional[dict] = None,
+    **kwargs,
+):
+    """
+    Write the given dataset(s) to CSV.
+
+    Primarily calls ``pyspark.sql.DataFrameWrite.csv`` separately for each dataset.
+
+    **Filtering** -- The ``qval_thresh`` and ``include_decoys`` parameters allow convenient filtering of output
+    PSMs or proteins.
+
+    For more sophisticated filtering, the optional ``threshold_col`` parameter includes only rows where this column
+    is ``True`` in the output. When ``threshold_col`` is specified the ``qval_thresh`` and ``include_decoys`` parameters
+    will be ignored.
+
+    Parameters
+    ----------
+    peptides : PsmDataset
+        The peptide dataset to write
+    proteins : ProteinDataset
+        (Optional) The protein dataset to write
+    location : str
+        A string specifying where the results should be written. By default the peptide and protein datasets will be
+        written to ``{location}/scry-peptides`` and ``{location}/scry-proteins`` respectively.
+    threshold_col : str | pyspark.sql.Column
+        (Optional) A column (or its name) specifying which rows will be included in the resulting library.
+    qval_thresh : float
+        (Optional) The largest *q*-value accepted into the library. Ignored if the dataset is not a
+        ``wheely.mammoth.ConfidenceDataset`` or ``threshold_col`` is specified.
+    include_decoys : bool
+        (Optional) If true, include decoy PSMs in the library. Ignored if ``threshold_col`` is specified. Default: ``False``
+    peptide_kwargs : dict (optional)
+        (Optional) Overrides used only for the peptide dataset.
+    protein_kwargs : dict (optional)
+        (Optional) Overrides used only for the protein dataset.
+    kwargs :
+        additional keyword arguments to pass to :py:func:`pyspark.sql.DataFrameWrite.csv`.
+        Defaults: ``{"mode": "errorifexists", "header": True}``
+    """
+    pass
+
+
+def _write_csv(
     data: _Union[_PsmDataset, _ProteinDataset],
     location: str,
     threshold_col: _Optional[_Union[str, _Column]] = None,
@@ -29,9 +78,9 @@ def write_csv(
     **kwargs,
 ):
     """
-    Write the given dataset to CSV
+    Write the given dataset to CSV.
 
-    A thin wrapper around ``pyspark.sql.DataFrameWrite.csv``.
+    A thin wrapper around ``pyspark.sql.DataFrameWrite.csv`` separately for each dataset.
 
     **Filtering** -- The ``qval_thresh`` and ``include_decoys`` parameters allow convenient filtering of output
     PSMs or proteins.
@@ -79,6 +128,54 @@ def write_csv(
 
 
 def write_parquet(
+    peptides: _PsmDataset,
+    proteins: _Optional[_ProteinDataset],
+    threshold_col: _Optional[_Union[str, _Column]] = None,
+    qval_thresh: float = None,
+    include_decoys: bool = False,
+    peptide_kwargs: _Optional[dict] = None,
+    protein_kwargs: _Optional[dict] = None,
+    **kwargs,
+):
+    """
+    Write the given dataset(s) to Parquet.
+
+     Primarily calls ``pyspark.sql.DataFrameWrite.parquet``.
+
+    **Filtering** -- The``qval_thresh`` and ``include_decoys`` parameters allow convenient filtering of output
+    PSMs or proteins.
+
+    For more sophisticated filtering, the optional ``threshold_col`` parameter includes only rows where this column
+    is ``True`` in the output. When ``threshold_col`` is specified the ``qval_thresh`` and ``include_decoys`` parameters
+    will be ignored.
+
+    Parameters
+    ----------
+    peptides : PsmDataset
+        The peptide dataset to write
+    proteins : ProteinDataset
+        (Optional) The protein dataset to write
+    location : str
+        A string specifying where the results should be written. By default the peptide and protein datasets will be
+        written to ``{location}/scry-peptides`` and ``{location}/scry-proteins`` respectively.
+    threshold_col : str | pyspark.sql.Column
+        (Optional) A column (or its name) specifying which rows will be included in the resulting library.
+    qval_thresh : float
+        (Optional) The largest *q*-value accepted into the library. Ignored if the dataset is not a
+        ``wheely.mammoth.ConfidenceDataset`` or ``threshold_col`` is specified.
+    include_decoys : bool
+        (Optional) If true, include decoy PSMs in the library. Ignored if ``threshold_col`` is specified. Default: ``False``
+    peptide_kwargs : dict (optional)
+        (Optional) Overrides used only for the peptide dataset.
+    protein_kwargs : dict (optional)
+        (Optional) Overrides used only for the protein dataset.
+    kwargs :
+        additional keyword arguments to pass to :py:func:`pyspark.sql.DataFrameWrite.csv`.
+        Defaults: ``{"mode": "errorifexists", "header": True}``
+    """
+
+
+def _write_parquet(
     data: _Union[_PsmDataset, _ProteinDataset],
     location: str,
     threshold_col: _Optional[_Union[str, _Column]] = None,
