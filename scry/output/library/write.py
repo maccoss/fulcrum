@@ -172,7 +172,8 @@ def write_library(
         else:
             _spectra_backend = _get_spectra_backend(spectra_backend)
 
-    # 1. Filter / normalize
+    if peptide_kwargs is None:
+        peptide_kwargs = {}
     if threshold_col is None:
         threshold_col = peptide_kwargs.pop("threshold_col", None)
     if qval_thresh is None:
@@ -180,6 +181,7 @@ def write_library(
     if include_decoys is None:
         include_decoys = peptide_kwargs.pop("include_decoys", False)
 
+    # 1. Filter / normalize
     psms = filter_psms(peptides, threshold_col, qval_thresh, include_decoys)
 
     if _logger.isEnabledFor(_logging.INFO):
@@ -226,7 +228,9 @@ def write_library(
             _logger.info("Will write %d entries to library", n_rows)
             assert n_rows > 0
     else:
-        spectra: _SpectraDataset = _spectra_backend(norm_psms, **kwargs)
+        spectra: _SpectraDataset = _spectra_backend(
+            norm_psms, **peptide_kwargs, **kwargs
+        )
 
         if _logger.isEnabledFor(_logging.INFO):
             n_spec = spectra.data.count()
