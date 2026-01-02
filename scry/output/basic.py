@@ -24,7 +24,7 @@ _logger = _logging.getLogger(__name__)
 
 def write_csv(
     peptides: _PsmDataset,
-    proteins: _Optional[_ProteinDataset],
+    proteins: _Optional[_ProteinDataset] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
     include_decoys: bool = False,
@@ -141,7 +141,7 @@ def _write_csv(
 
 def write_parquet(
     peptides: _PsmDataset,
-    proteins: _Optional[_ProteinDataset],
+    proteins: _Optional[_ProteinDataset] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
     include_decoys: bool = False,
@@ -255,7 +255,7 @@ def _write_parquet(
 def _write_basic(
     fn: _Callable,
     peptides: _PsmDataset,
-    proteins: _Optional[_ProteinDataset],
+    proteins: _Optional[_ProteinDataset] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
     include_decoys: bool = False,
@@ -321,25 +321,28 @@ def _write_basic(
 
     pep_res = pep_out_res or peptides
 
-    protein_kwargs = dict(
-        dict(
-            kwargs,
-            threshold_col=threshold_col,
-            qval_thresh=qval_thresh,
-            include_decoys=include_decoys,
-        ),
-        **protein_kwargs,
-    )
+    if proteins:
+        protein_kwargs = dict(
+            dict(
+                kwargs,
+                threshold_col=threshold_col,
+                qval_thresh=qval_thresh,
+                include_decoys=include_decoys,
+            ),
+            **protein_kwargs,
+        )
 
-    prot_out_start = _time()
-    prot_out_res = fn(proteins, **protein_kwargs)
-    prot_out_end = _time()
+        prot_out_start = _time()
+        prot_out_res = fn(proteins, **protein_kwargs)
+        prot_out_end = _time()
 
-    _logger.info(
-        "Wrote protein results in %.02f sec",
-        prot_out_end - prot_out_start,
-    )
+        _logger.info(
+            "Wrote protein results in %.02f sec",
+            prot_out_end - prot_out_start,
+        )
 
-    prot_res = prot_out_res or proteins
+        prot_res = prot_out_res or proteins
+    else:
+        prot_res = proteins
 
     return pep_res, prot_res
