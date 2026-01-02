@@ -36,6 +36,7 @@ def quantify_proteins_directlfq(
     dset: PsmIntensityDataset,
     qvalue_threshold: float = None,
     filter_column: _Union[str, _Column] = None,
+    rollup_peptides: bool = False,
 ) -> ProteinIntensityDataset:
     """
     Roll up PSM/precursor/peptide intensities to the protein level using DirectLFQ.
@@ -67,6 +68,12 @@ def quantify_proteins_directlfq(
         If provided, ``dset`` will be filtered to only rows with a true value in the specified column before rolling up
         to the protein level. If ``None`` no filtering will be performed. This option can be specified in combination
         with ``qvalue_threshold``, in which case only rows passing both filters will be rolled up.
+    rollup_peptides : bool (optional)
+        If ``False`` (default), PSM/precursor intensities will be rolled up directly to the protein level.
+        If ``True``, intensities will first be rolled up to the peptide level (by taking the maximum intensity
+        across PSMs/precursors for each peptide in each sample), and then peptides will be rolled up to the protein level.
+        Note: use of ``rollup_peptides=True`` is *NOT RECOMMENDED*, but was the default behavior in releases prior to
+        Scry 1.7.0 and is preserved for backward compatibility.
 
     Returns
     -------
@@ -96,6 +103,9 @@ def quantify_proteins_directlfq(
 
     # Get the column names from the dataset; these will be used in the UDF
     pep_col = dset.peptide_column
+    charge_col = (
+        None if rollup_peptides else getattr(dset, "charge_column", None)
+    )
     samp_col = dset.sample_column
     inten_col = dset.intensity_column
     prot_col = dset.protein_column
@@ -106,9 +116,18 @@ def quantify_proteins_directlfq(
     directlfq_log_level = logging.getLogger("directlfq").getEffectiveLevel()
 
     def estimate_udf(pdf: _pd.DataFrame) -> _pd.DataFrame:
+        # Generate ion identifiers if needed
+        if charge_col is None:
+            ion_col = pep_col
+        else:
+            ion_col = "__ion"
+            pdf[ion_col] = (
+                pdf[pep_col].astype(str) + "+" + pdf[charge_col].astype(str)
+            )
+
         # Pivot to wide format: index=peptide/precursor, columns=sample, values=intensity
         wide = pdf.pivot_table(
-            index=[prot_col, pep_col],
+            index=[prot_col, ion_col],
             columns=samp_col,
             values=inten_col,
             aggfunc="first",
