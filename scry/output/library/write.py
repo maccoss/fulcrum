@@ -41,7 +41,8 @@ _logger = _logging.getLogger(__name__)
 
 
 def write_library(
-    dataset: _PsmDataset,
+    peptides: _PsmDataset,
+    proteins: _Optional = None,
     location: _Optional[str] = None,
     spectra_backend: _Union[str, _Callable] = None,
     threshold_col: _Optional[_Union[str, _Column]] = None,
@@ -109,24 +110,26 @@ def write_library(
 
     Parameters
     ----------
-    dataset: PsmDataset
+    peptides : PsmDataset
         The dataset
-    location: str
+    proteins :
+        Ignored
+    location : str
         The output location (path or URI)
-    output_location: DEPRECATED
+    output_location.: DEPRECATED
         Synonym for ``location``
-    spectra_backend: str | callable
+    spectra_backend : str | callable
         The backend implementation used to look up library spectral
         information for each supplied PSM.
-    threshold_col: str | pyspark.sql.Column; optional
+    threshold_col : str | pyspark.sql.Column; optional
         A column (or its name) specifying which
         rows will be included in the resulting library.
-    qval_thresh: float; default = 0.01
+    qval_thresh : float; default = 0.01
         The largest *q*-value accepted into the library. Ignored if
         the dataset is not a :py:class:`wheely.mammoth.ConfidenceDataset` or ``threshold_col`` is specified.
-    include_decoys: bool; default = False
+    include_decoys : bool; default = False
         If true, include decoy PSMs in the library. Ignored if ``threshold_col`` is specified.
-    peptide_normalizer: dict
+    peptide_normalizer : dict
         A dict whose ``backend`` (a ``Callable``) will be called to
         normalize each ``ModifiedPeptide`` value (from ``dataset.peptide_column``).
 
@@ -139,20 +142,23 @@ def write_library(
         or ``peptide_normalizer["backend"]`` will disable normalization.
 
         TODO: support a registry of available backend normalizers and permit ``backend`` to be a str
-
-    kwargs:
+    peptide_kwargs : dict
+        Keyword arguments to be merged with ``kwargs``
+    protein_kwargs : dict
+        Ignored.
+    kwargs :
         Any additional keyword arguments are passed to the spectra_backend callable.
 
     Returns
     -------
-    out: pyspark.sql.DataFrame
+    out : pyspark.sql.DataFrame
         A PySpark DataFrame with the same contents as the output library.
     """
     if not location:
         location = output_location
 
     _spectra_backend: _Callable
-    if not isinstance(dataset, _SpectraDataset):
+    if not isinstance(peptides, _SpectraDataset):
         # Fail-fast if a spectral backend is required but not provided
         if not spectra_backend:
             raise ValueError("spectra_backend may not be None!")
@@ -163,7 +169,7 @@ def write_library(
             _spectra_backend = _get_spectra_backend(spectra_backend)
 
     # 1. Filter / normalize
-    psms = filter_psms(dataset, threshold_col, qval_thresh, include_decoys)
+    psms = filter_psms(peptides, threshold_col, qval_thresh, include_decoys)
 
     if _logger.isEnabledFor(_logging.INFO):
         n_filt = psms.data.count()
@@ -189,7 +195,7 @@ def write_library(
 
     # 2. Join spectral info (if necessary)
     joined_df: _DataFrame
-    if isinstance(dataset, _SpectraDataset):
+    if isinstance(peptides, _SpectraDataset):
         assert isinstance(
             norm_psms, _SpectraDataset
         ), "Normalized dataset is no longer a SpectraDataset!!"
@@ -219,11 +225,11 @@ def write_library(
             assert not spectra.data.isEmpty()
 
         assert (
-            dataset.spectrum_columns == spectra.spectrum_columns
-        ), f"Unsupported: differing spectrum IDs! PSMs had {dataset.spectrum_columns} but spectra had {spectra.spectrum_columns}"
+            peptides.spectrum_columns == spectra.spectrum_columns
+        ), f"Unsupported: differing spectrum IDs! PSMs had {peptides.spectrum_columns} but spectra had {spectra.spectrum_columns}"
 
         joined_df = norm_psms.data.alias("psms").join(
-            spectra.data.alias("spectra"), on=dataset.spectrum_columns
+            spectra.data.alias("spectra"), on=peptides.spectrum_columns
         )
 
         peptide_col = f"psms.{norm_psms.peptide_column}"
@@ -255,8 +261,8 @@ def write_library(
             (~_fns.col(target_col).cast("boolean")).alias("decoy"),
             # We must select this up front, it will be aliased into the correct position below
             *(
-                [_fns.col("psms." + dataset.qvalue_column).alias("__qvalue")]
-                if isinstance(dataset, _ConfidenceDataset)
+                [_fns.col("psms." + peptides.qvalue_column).alias("__qvalue")]
+                if isinstance(peptides, _ConfidenceDataset)
                 else []
             ),
             peak,
@@ -270,7 +276,7 @@ def write_library(
     )
 
     # Conditionally append column
-    if isinstance(dataset, _ConfidenceDataset):
+    if isinstance(peptides, _ConfidenceDataset):
         output = output.withColumn(
             # Note: We take col name from _dataset_, so we only assume the column is present
             # just in case _filter_psms / with_data returns a different type of dataset.
