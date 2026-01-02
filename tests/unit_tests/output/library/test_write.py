@@ -154,7 +154,12 @@ def test_write_library(request, dataset_fixture, spectra_backend):
     dataset = request.getfixturevalue(dataset_fixture)
 
     result = write_library(
-        dataset, spectra_backend=spectra_backend, output_location=None
+        dataset,
+        spectra_backend=spectra_backend,
+        output_location=None,
+        qval_thresh=1.0,
+        include_decoys=True,
+        threshold_col=None,
     )
 
     # print(result.toPandas())
