@@ -383,7 +383,7 @@ def scry_v1(
     )
 
     # Get output backend
-    output_backend = output.pop("backend", "write_parquet")
+    output_backend = (output or {}).pop("backend", "write_parquet")
     if not callable(output_backend):
         output_backend = _get_output_backend(output_backend)
 
