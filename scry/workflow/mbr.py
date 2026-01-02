@@ -531,72 +531,18 @@ def mbr_workflow(
         protein_delim=protein_delim,
     )
 
-    # Output peptide results
-    if isinstance(peptide_output, str):
-        pep_out_loc = peptide_output
-        peptide_output = dict(
-            output or dict(),
-            location=pep_out_loc,
-        )
-    elif peptide_output:
-        if set(peptide_output.keys()) == set(["location"]):
-            pep_out_loc = peptide_output["location"]
-            peptide_output = dict(
-                output or dict(),
-                location=pep_out_loc,
-            )
-        else:
-            peptide_output = peptide_output.copy()
-    else:
-        peptide_output = dict()
+    # Get output backend
+    output_backend = output.pop("backend", "write_parquet")
+    if not callable(output_backend):
+        output_backend = _get_output_backend(output_backend)
 
-    peptide_out_backend = peptide_output.pop("backend", "write_parquet")
-    if not callable(peptide_out_backend):
-        peptide_out_backend = _get_output_backend(peptide_out_backend)
-
-    pep_out_start = _time()
-    pep_out_res = peptide_out_backend(pep_quant_dset, **peptide_output)
-    pep_out_end = _time()
-
-    _logger.info(
-        "Wrote peptide results in %.02f sec",
-        pep_out_end - pep_out_start,
+    # Write output
+    output_res = output_backend(
+        pep_quant_dset,
+        protein_result,
+        peptide_kwargs=peptide_output,
+        protein_kwargs=protein_output,
+        **output,
     )
 
-    pep_res = pep_out_res or pep_quant_dset
-
-    # Output protein results
-    if isinstance(protein_output, str):
-        prot_out_loc = protein_output
-        protein_output = dict(
-            output or dict(),
-            location=prot_out_loc,
-        )
-    elif protein_output:
-        if set(protein_output.keys()) == set(["location"]):
-            prot_out_loc = protein_output["location"]
-            protein_output = dict(
-                output or dict(),
-                location=prot_out_loc,
-            )
-        else:
-            protein_output = protein_output.copy()
-    else:
-        protein_output = dict()
-
-    protein_out_backend = protein_output.pop("backend", "write_parquet")
-    if not callable(protein_out_backend):
-        protein_out_backend = _get_output_backend(protein_out_backend)
-
-    prot_out_start = _time()
-    prot_out_res = protein_out_backend(protein_result, **protein_output)
-    prot_out_end = _time()
-
-    _logger.info(
-        "Wrote protein results in %.02f sec",
-        prot_out_end - prot_out_start,
-    )
-
-    prot_res = prot_out_res or protein_result
-
-    return pep_res, prot_res
+    return output_res
