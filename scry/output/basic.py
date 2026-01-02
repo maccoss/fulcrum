@@ -301,7 +301,12 @@ def _write_basic(
     """
 
     peptide_kwargs = dict(
-        kwargs,
+        dict(
+            kwargs,
+            threshold_col=threshold_col,
+            qval_thresh=qval_thresh,
+            include_decoys=include_decoys,
+        ),
         **peptide_kwargs,
     )
 
@@ -317,7 +322,12 @@ def _write_basic(
     pep_res = pep_out_res or peptides
 
     protein_kwargs = dict(
-        kwargs,
+        dict(
+            kwargs,
+            threshold_col=threshold_col,
+            qval_thresh=qval_thresh,
+            include_decoys=include_decoys,
+        ),
         **protein_kwargs,
     )
 
