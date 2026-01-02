@@ -307,7 +307,7 @@ def _write_basic(
             qval_thresh=qval_thresh,
             include_decoys=include_decoys,
         ),
-        **peptide_kwargs,
+        **peptide_kwargs or {},
     )
 
     pep_out_start = _time()
@@ -329,7 +329,7 @@ def _write_basic(
                 qval_thresh=qval_thresh,
                 include_decoys=include_decoys,
             ),
-            **protein_kwargs,
+            **protein_kwargs or {},
         )
 
         prot_out_start = _time()
