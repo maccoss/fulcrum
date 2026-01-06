@@ -178,7 +178,7 @@ def scry_v0(
         if isinstance(output, str):
             output = dict(location=output)
 
-        output_backend = output.pop("backend", "write_csv")
+        output_backend = output.pop("backend", "write_parquet")
         if not callable(output_backend):
             output_backend = _get_output_backend(output_backend)
 
