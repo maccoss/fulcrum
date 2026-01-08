@@ -215,6 +215,12 @@ def write_combined(
             "proteins dataset must have a q-value column for combined output"
         )
 
+    # PG PEP: from protein errprob_column, if available
+    pg_errprob_col = getattr(proteins, "errprob_column", "prot")
+    if pg_errprob_col is not None:
+        output_cols["PG.PEP"] = _fns.col(pg_errprob_col)
+        input_cols.add(pg_errprob_col)
+
     # Precursor.Quantity: from precursor dataset intensity column if available
     # TODO: use semantics to resolve raw vs normalized intensity
     pep_intensity_col = getattr(peptides, "intensity_column", "pep")
