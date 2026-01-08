@@ -81,6 +81,7 @@ def quantify_basic(
         target_column=dset.target_column,
         protein_column=dset.protein_column,
         protein_delim=dset.protein_delim,
+        semantics=dset.semantics,
     )
 
     if isinstance(dset, ConfidenceDataset):
