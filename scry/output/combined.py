@@ -129,23 +129,30 @@ def write_combined(
     # Build output columns
     output_cols = {}
 
+    # Track which columns of the joined DataFrame are used
+    input_cols = set()
+
     # Run: from sample_column
     output_cols["Run"] = _fns.col(f"pep.{sample_col}")
+    input_cols.add(f"pep.{sample_col}")
 
     # Protein.Group: from protein_column
     # TODO: use semantics to resolve grouped vs all proteins
     output_cols["Protein.Group"] = _fns.col(f"pep.{peptides.protein_column}")
+    input_cols.add(f"pep.{peptides.protein_column}")
 
     # Modified.Sequence: from peptide_column
     output_cols["Modified.Sequence"] = _fns.col(
         f"pep.{peptides.peptide_column}"
     )
+    input_cols.add(f"pep.{peptides.peptide_column}")
 
     # Precursor.Charge: from charge_column, if available
     if peptides.charge_column is not None:
         output_cols["Precursor.Charge"] = _fns.col(
             f"pep.{peptides.charge_column}"
         )
+        input_cols.add(f"pep.{peptides.charge_column}")
 
     # RT: from RT semantic, or fall back to rt_column if available
     rt_col = _get_column_by_semantic(peptides, _RT_IN_SECONDS, "pep")
@@ -155,6 +162,7 @@ def write_combined(
             rt_col = f"pep.{rt_col}"
     if rt_col is not None:
         output_cols["RT"] = _fns.col(rt_col)
+        input_cols.add(rt_col)
 
     # Q.Value: from PSM-level q-value semantic, if available
     q_val_col = _get_column_by_semantic(peptides, _PSM_QVALUE, "pep")
@@ -164,11 +172,13 @@ def write_combined(
             q_val_col = f"pep.{psm_qval_col}"
     if q_val_col is not None:
         output_cols["Q.Value"] = _fns.col(q_val_col)
+        input_cols.add(q_val_col)
 
     # PEP: from errprob_column, if available
-    errprob_col = getattr(peptides, "errprob_column", None)
+    errprob_col = getattr(peptides, "errprob_column", "pep")
     if errprob_col is not None:
-        output_cols["PEP"] = _fns.col(f"pep.{errprob_col}")
+        output_cols["PEP"] = _fns.col(errprob_col)
+        input_cols.add(errprob_col)
 
     # Global.Precursor.Q.Value: from precursor-level q-value semantic, if available
     precursor_qval_col = _get_column_by_semantic(
@@ -180,6 +190,7 @@ def write_combined(
         )
     if precursor_qval_col is not None:
         output_cols["Global.Precursor.Q.Value"] = _fns.col(precursor_qval_col)
+        input_cols.add(precursor_qval_col)
 
     if psm_qval_col is None and precursor_qval_col is None:
         raise ValueError(
@@ -196,6 +207,7 @@ def write_combined(
             pg_qval_col = f"prot.{pg_qval_col}"
     if pg_qval_col is not None:
         output_cols["Global.PG.Q.Value"] = _fns.col(pg_qval_col)
+        input_cols.add(pg_qval_col)
     else:
         raise ValueError(
             "proteins dataset must have a q-value column for combined output"
@@ -203,11 +215,10 @@ def write_combined(
 
     # Precursor.Quantity: from precursor dataset intensity column if available
     # TODO: use semantics to resolve raw vs normalized intensity
-    pep_intensity_col = getattr(peptides, "intensity_column", None)
+    pep_intensity_col = getattr(peptides, "intensity_column", "pep")
     if pep_intensity_col is not None:
-        output_cols["Precursor.Quantity"] = _fns.col(
-            f"pep.{pep_intensity_col}"
-        )
+        output_cols["Precursor.Quantity"] = _fns.col(pep_intensity_col)
+        input_cols.add(pep_intensity_col)
     else:
         raise ValueError(
             "peptides dataset must have an intensity column for combined output"
@@ -215,9 +226,10 @@ def write_combined(
 
     # PG.Quantity: from protein dataset intensity column if available
     # TODO: use semantics to resolve multiple roll-up quantities
-    prot_intensity_col = getattr(proteins, "intensity_column", None)
+    prot_intensity_col = getattr(proteins, "intensity_column", "prot")
     if prot_intensity_col is not None:
-        output_cols["PG.Quantity"] = _fns.col(f"prot.{prot_intensity_col}")
+        output_cols["PG.Quantity"] = _fns.col(prot_intensity_col)
+        input_cols.add(prot_intensity_col)
     else:
         raise ValueError(
             "proteins dataset must have an intensity column for combined output"
@@ -225,14 +237,26 @@ def write_combined(
 
     # Add score columns if not already included
     for score_col in peptides.score_columns:
-        if f"pep.{score_col}" not in output_cols.values():
-            if score_col not in output_cols:
-                output_cols[score_col] = _fns.col(f"pep.{score_col}")
+        score_input_col = f"pep.{score_col}"
+        if score_input_col not in input_cols:
+            if score_col not in output_cols.keys():
+                output_cols[score_col] = _fns.col(score_input_col)
             else:
                 # Avoid column name collision
                 _logger.warning(
                     "score column %s already exists in output; it will be dropped!",
-                    score_col,
+                    score_input_col,
+                )
+    for score_col in proteins.score_columns:
+        score_input_col = f"prot.{score_col}"
+        if score_input_col not in input_cols:
+            if score_col not in output_cols.keys():
+                output_cols[score_col] = _fns.col(score_input_col)
+            else:
+                # Avoid column name collision
+                _logger.warning(
+                    "score column %s already exists in output; it will be dropped!",
+                    score_input_col,
                 )
 
     result_df = joined.select(
