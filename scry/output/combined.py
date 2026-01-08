@@ -15,16 +15,22 @@ from pyspark.sql import (
 
 from wheely.mammoth import PsmDataset as _PsmDataset
 from wheely.mammoth.proteins import ProteinDataset as _ProteinDataset
-from wheely.mammoth.semantics.semantics import (
-    PSM_QVALUE as _PSM_QVALUE,
-    PRECURSOR_QVALUE as _PRECURSOR_QVALUE,
+from wheely.mammoth.semantics import (
+    NORMALIZED_RT_IN_SECONDS as _NORMALIZED_RT_IN_SECONDS,
+    PEPTIDE_ERRPROB as _PEPTIDE_ERRPROB,
     PEPTIDE_QVALUE as _PEPTIDE_QVALUE,
+    PRECURSOR_ERRPROB as _PRECURSOR_ERRPROB,
+    PRECURSOR_QVALUE as _PRECURSOR_QVALUE,
+    PROTEIN_GROUP_ERRPROB as _PROTEIN_GROUP_ERRPROB,
     PROTEIN_GROUP_QVALUE as _PROTEIN_GROUP_QVALUE,
     PSM_ERRPROB as _PSM_ERRPROB,
-    PRECURSOR_ERRPROB as _PRECURSOR_ERRPROB,
-    PEPTIDE_ERRPROB as _PEPTIDE_ERRPROB,
-    PROTEIN_GROUP_ERRPROB as _PROTEIN_GROUP_ERRPROB,
+    PSM_QVALUE as _PSM_QVALUE,
     RT_IN_SECONDS as _RT_IN_SECONDS,
+    RT_START_IN_SECONDS as _RT_START_IN_SECONDS,
+    RT_STOP_IN_SECONDS as _RT_STOP_IN_SECONDS,
+    SCAN_NUMBER as _SCAN_NUMBER,
+    THEORETICAL_MONO_MASS as _THEORETICAL_MONO_MASS,
+    THEORETICAL_PRECURSOR_MZ as _THEORETICAL_PRECURSOR_MZ,
 )
 
 from .util import filter_psms
@@ -161,12 +167,43 @@ def write_combined(
     )
     input_cols.add(f"pep.{peptides.peptide_column}")
 
+    # Decoy: from is_decoy_column
+    target_column = f"pep.{peptides.target_column}"
+    output_cols["Decoy"] = ~_fns.col(
+        target_column
+    )  # important: invert boolean sense: target -> decoy
+    input_cols.add(target_column)
+
     # Precursor.Charge: from charge_column, if available
     if peptides.charge_column is not None:
         output_cols["Precursor.Charge"] = _fns.col(
             f"pep.{peptides.charge_column}"
         )
         input_cols.add(f"pep.{peptides.charge_column}")
+
+    # Precursor m/z: from m/z semantic, or fall back to mz_column if available
+    mz_col = _get_column_by_semantic(
+        peptides, _THEORETICAL_PRECURSOR_MZ, "pep"
+    )
+    if mz_col is None:
+        mz_col = getattr(peptides, "mz_column", None)
+        if mz_col is not None:
+            mz_col = f"pep.{mz_col}"
+    if mz_col is not None:
+        output_cols["Precursor.Mz"] = _fns.col(mz_col)
+        input_cols.add(mz_col)
+
+    # Precursor Mass: from theoretical mass semantic, if available
+    mass_col = _get_column_by_semantic(peptides, _THEORETICAL_MONO_MASS, "pep")
+    if mass_col is not None:
+        output_cols["Peptide.Mass"] = _fns.col(mass_col)
+        input_cols.add(mass_col)
+
+    # Scan Number: from semantic, if available
+    scan_col = _get_column_by_semantic(peptides, _SCAN_NUMBER, "pep")
+    if scan_col is not None:
+        output_cols["MS2.Scan"] = _fns.col(scan_col)
+        input_cols.add(scan_col)
 
     # RT: from RT semantic, or fall back to rt_column if available
     rt_col = _get_column_by_semantic(peptides, _RT_IN_SECONDS, "pep")
@@ -177,6 +214,28 @@ def write_combined(
     if rt_col is not None:
         output_cols["RT"] = _fns.col(rt_col)
         input_cols.add(rt_col)
+
+    # Start RT: from semantic, if available
+    rt_start_col = _get_column_by_semantic(
+        peptides, _RT_START_IN_SECONDS, "pep"
+    )
+    if rt_start_col is not None:
+        output_cols["RT.Start"] = _fns.col(rt_start_col)
+        input_cols.add(rt_start_col)
+
+    # Stop RT: from semantic, if available
+    rt_stop_col = _get_column_by_semantic(peptides, _RT_STOP_IN_SECONDS, "pep")
+    if rt_stop_col is not None:
+        output_cols["RT.Stop"] = _fns.col(rt_stop_col)
+        input_cols.add(rt_stop_col)
+
+    # iRT: from iRT semantic
+    irt_col = _get_column_by_semantic(
+        peptides, _NORMALIZED_RT_IN_SECONDS, "pep"
+    )
+    if irt_col is not None:
+        output_cols["iRT"] = _fns.col(irt_col)
+        input_cols.add(irt_col)
 
     # Q.Value: from PSM-level q-value semantic, if available
     psm_qval_col = _get_column_by_semantic(peptides, _PSM_QVALUE, "pep")
