@@ -3,48 +3,44 @@
 """
 
 import copy as _copy
+import json as _json
 import logging as _logging
 from time import time as _time
 from typing import (
     Any as _Any,
-    Callable as _Callable,
     Dict as _Dict,
     Optional as _Optional,
     Tuple as _Tuple,
     Union as _Union,
 )
 
-import json as _json
-import toml as _toml
 import polars as _pl
+from airpot import BrewResult as _BrewResult, brew as _brew
+from cortado import assign_confidence as _assign_confidence
+from cortado.protein import score_proteins as _score_proteins
+from proffer.spark import infer_spark as _infer_spark
 from pyspark.sql import (
     SparkSession as _SparkSession,
     functions as _fns,
 )
 
-from airpot import (
-    brew as _brew,
-    BrewResult as _BrewResult,
-    RescoringResult as _RescoringResult,
-)
-from cortado import assign_confidence as _assign_confidence
-from cortado.protein import score_proteins as _score_proteins
-from proffer.spark import infer_spark as _infer_spark
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
-    ConfidenceDataset as _ConfidenceDataset,
 )
 from wheely.mammoth.proteins import (
     ProteinDataset as _ProteinDataset,
 )
 
-from ..search import (
-    get_backend as _get_search_backend,
+from ..output import (
+    get_backend as _get_output_backend,
 )
 from ..quant.peptide import get_backend as _get_peptide_quant_backend
 from ..quant.protein import get_backend as _get_protein_rollup_backend
-from ..output import (
-    get_backend as _get_output_backend,
+from ..quant.protein.util import (
+    merge_protein_confidence_and_quant as _merge_protein_confidence_and_quant,
+)
+from ..search import (
+    get_backend as _get_search_backend,
 )
 
 _logger = _logging.getLogger(__name__)
@@ -503,32 +499,9 @@ def mbr_workflow(
         rollup_end - rollup_start,
     )
 
-    protein_result = prot_conf.with_data(
-        prot_conf.data.join(
-            prot_quant_dset.data.select(
-                (
-                    # To match the handling of protein group IDs above, we must join group IDs into strings
-                    _fns.array_join(
-                        _fns.array_sort(
-                            _fns.array_distinct(
-                                prot_quant_dset.proteins
-                                if prot_quant_dset.protein_delim is None
-                                else _fns.split(
-                                    prot_quant_dset.proteins,
-                                    prot_quant_dset.protein_delim,
-                                )
-                            )
-                        ),
-                        protein_delim,
-                    )
-                ).alias(prot_conf.protein_column),
-                prot_quant_dset.samples,
-                prot_quant_dset.intensities,
-            ),
-            on=prot_conf.protein_column,
-            how="leftouter",
-        ),
-        protein_delim=protein_delim,
+    # Merge global protein confidence with per-sample quantifications
+    protein_result = _merge_protein_confidence_and_quant(
+        prot_conf, prot_quant_dset
     )
 
     # Get output backend

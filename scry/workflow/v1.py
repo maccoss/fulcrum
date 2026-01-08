@@ -6,7 +6,6 @@ import logging as _logging
 from time import time as _time
 from typing import (
     Any as _Any,
-    Callable as _Callable,
     Dict as _Dict,
     Optional as _Optional,
     Tuple as _Tuple,
@@ -22,17 +21,19 @@ from pyspark.sql import (
 from airpot import (
     brew as _brew,
     BrewResult as _BrewResult,
-    RescoringResult as _RescoringResult,
 )
 from cortado import assign_confidence as _assign_confidence
 from cortado.protein import score_proteins as _score_proteins
 from proffer.spark import infer_spark as _infer_spark
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
-    ConfidenceDataset as _ConfidenceDataset,
 )
 from wheely.mammoth.proteins import (
+    ProteinConfidenceDataset as _ProteinConfidenceDataset,
     ProteinDataset as _ProteinDataset,
+)
+from ..quant.protein.util import (
+    merge_protein_confidence_and_quant as _merge_protein_confidence_and_quant,
 )
 
 from ..search import (
@@ -298,7 +299,7 @@ def scry_v1(
     # Compute protein FDR by rescoring protein groups
     # TODO: pluggable backends
     prot_conf_start = _time()
-    prot_conf = _score_proteins(
+    prot_conf: _ProteinConfidenceDataset = _score_proteins(
         res_inferred,
         **(protein_scoring or {}),
     )
@@ -357,29 +358,9 @@ def scry_v1(
         rollup_end - rollup_start,
     )
 
-    protein_result = prot_conf.with_data(
-        prot_conf.data.join(
-            prot_quant_dset.data.select(
-                (
-                    # To match the handling of protein group IDs above, we must join group IDs into strings
-                    _fns.array_join(
-                        (
-                            prot_quant_dset.proteins
-                            if prot_quant_dset.protein_delim is None
-                            else _fns.split(
-                                prot_quant_dset.proteins,
-                                prot_quant_dset.protein_delim,
-                            )
-                        ),
-                        prot_conf.protein_delim,
-                    )
-                ).alias(prot_conf.protein_column),
-                prot_quant_dset.samples,
-                prot_quant_dset.intensities,
-            ),
-            on=prot_conf.protein_column,
-            how="leftouter",
-        )
+    # Merge global protein confidence with per-sample quantifications
+    protein_result = _merge_protein_confidence_and_quant(
+        prot_conf, prot_quant_dset
     )
 
     # Get output backend
