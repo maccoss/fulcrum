@@ -18,8 +18,12 @@ from wheely.mammoth.proteins import ProteinDataset as _ProteinDataset
 from wheely.mammoth.semantics.semantics import (
     PSM_QVALUE as _PSM_QVALUE,
     PRECURSOR_QVALUE as _PRECURSOR_QVALUE,
-    PSM_PRECURSOR_QVALUE as _PSM_PRECURSOR_QVALUE,
+    PEPTIDE_QVALUE as _PEPTIDE_QVALUE,
     PROTEIN_GROUP_QVALUE as _PROTEIN_GROUP_QVALUE,
+    PSM_ERRPROB as _PSM_ERRPROB,
+    PRECURSOR_ERRPROB as _PRECURSOR_ERRPROB,
+    PEPTIDE_ERRPROB as _PEPTIDE_ERRPROB,
+    PROTEIN_GROUP_ERRPROB as _PROTEIN_GROUP_ERRPROB,
     RT_IN_SECONDS as _RT_IN_SECONDS,
 )
 
@@ -180,13 +184,18 @@ def write_combined(
         output_cols["Q.Value"] = _fns.col(psm_qval_col)
         input_cols.add(psm_qval_col)
 
-    # PEP: from errprob_column, if available
-    errprob_col = getattr(peptides, "errprob_column", "pep")
+    # PEP: from PSM-level errprob semantic, if available, falling back to errprob_column
+    errprob_col = _get_column_by_semantic(peptides, _PSM_ERRPROB, "pep")
+    if errprob_col is None:
+        errprob_col = getattr(peptides, "errprob_column", "pep")
+        if errprob_col is not None:
+            errprob_col = f"pep.{errprob_col}"
     if errprob_col is not None:
         output_cols["PEP"] = _fns.col(errprob_col)
         input_cols.add(errprob_col)
 
     # Global.Precursor.Q.Value: from precursor-level q-value semantic, if available
+    # TODO: semantics do not clarify global vs local; assume global for now
     precursor_qval_col = _get_column_by_semantic(
         peptides, _PRECURSOR_QVALUE, "pep"
     )
@@ -194,12 +203,45 @@ def write_combined(
         output_cols["Global.Precursor.Q.Value"] = _fns.col(precursor_qval_col)
         input_cols.add(precursor_qval_col)
 
-    if psm_qval_col is None and precursor_qval_col is None:
+    # Global Precursor PEP
+    # TODO: semantics do not clarify global vs local; assume global for now
+    precursor_errprob_col = _get_column_by_semantic(
+        peptides, _PRECURSOR_ERRPROB, "pep"
+    )
+    if precursor_errprob_col is not None:
+        output_cols["Global.Precursor.PEP"] = _fns.col(precursor_errprob_col)
+        input_cols.add(precursor_errprob_col)
+
+    # Global.Peptide.Q.Value: from peptide-level q-value semantic, if available
+    # TODO: semantics do not clarify global vs local; assume global for now
+    peptide_qval_col = _get_column_by_semantic(
+        peptides, _PEPTIDE_QVALUE, "pep"
+    )
+    if peptide_qval_col is not None:
+        output_cols["Global.Peptide.Q.Value"] = _fns.col(peptide_qval_col)
+        input_cols.add(peptide_qval_col)
+
+    # Global Peptide PEP
+    # TODO: semantics do not clarify global vs local; assume global for now
+    peptide_errprob_col = _get_column_by_semantic(
+        peptides, _PEPTIDE_ERRPROB, "pep"
+    )
+    if peptide_errprob_col is not None:
+        output_cols["Global.Peptide.PEP"] = _fns.col(peptide_errprob_col)
+        input_cols.add(peptide_errprob_col)
+
+    # Check that we have at least one q-value column
+    if (
+        psm_qval_col is None
+        and precursor_qval_col is None
+        and peptide_qval_col is None
+    ):
         raise ValueError(
-            "peptides dataset must have a PSM- or precursor q-value column for combined output"
+            "peptides dataset must have a PSM-, precursor-, or peptide-level q-value column for combined output"
         )
 
     # Global.PG.Q.Value: from protein group-level q-value semantic, or fall back to protein qvalue_column
+    # TODO: semantics do not clarify global vs local; assume global for now
     pg_qval_col = _get_column_by_semantic(
         proteins, _PROTEIN_GROUP_QVALUE, "prot"
     )
@@ -216,9 +258,10 @@ def write_combined(
         )
 
     # PG PEP: from protein errprob_column, if available
+    # TODO: semantics do not clarify global vs local; assume global for now
     pg_errprob_col = getattr(proteins, "errprob_column", "prot")
     if pg_errprob_col is not None:
-        output_cols["PG.PEP"] = _fns.col(pg_errprob_col)
+        output_cols["Global.PG.PEP"] = _fns.col(pg_errprob_col)
         input_cols.add(pg_errprob_col)
 
     # Precursor.Quantity: from precursor dataset intensity column if available
