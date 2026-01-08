@@ -175,14 +175,10 @@ def write_combined(
         input_cols.add(rt_col)
 
     # Q.Value: from PSM-level q-value semantic, if available
-    q_val_col = _get_column_by_semantic(peptides, _PSM_QVALUE, "pep")
-    if q_val_col is None:
-        psm_qval_col = getattr(peptides, "qvalue_column", None)
-        if psm_qval_col is not None:
-            q_val_col = f"pep.{psm_qval_col}"
-    if q_val_col is not None:
-        output_cols["Q.Value"] = _fns.col(q_val_col)
-        input_cols.add(q_val_col)
+    psm_qval_col = _get_column_by_semantic(peptides, _PSM_QVALUE, "pep")
+    if psm_qval_col is not None:
+        output_cols["Q.Value"] = _fns.col(psm_qval_col)
+        input_cols.add(psm_qval_col)
 
     # PEP: from errprob_column, if available
     errprob_col = getattr(peptides, "errprob_column", "pep")
@@ -194,10 +190,6 @@ def write_combined(
     precursor_qval_col = _get_column_by_semantic(
         peptides, _PRECURSOR_QVALUE, "pep"
     )
-    if precursor_qval_col is None:
-        precursor_qval_col = _get_column_by_semantic(
-            peptides, _PSM_PRECURSOR_QVALUE, "pep"
-        )
     if precursor_qval_col is not None:
         output_cols["Global.Precursor.Q.Value"] = _fns.col(precursor_qval_col)
         input_cols.add(precursor_qval_col)
