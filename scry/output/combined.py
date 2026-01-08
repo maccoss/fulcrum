@@ -257,9 +257,15 @@ def write_combined(
             "proteins dataset must have a q-value column for combined output"
         )
 
-    # PG PEP: from protein errprob_column, if available
+    # PG PEP: from protein group-level errprob sematnic, or fall back to protein errprob_column, if available
     # TODO: semantics do not clarify global vs local; assume global for now
-    pg_errprob_col = getattr(proteins, "errprob_column", "prot")
+    pg_errprob_col = _get_column_by_semantic(
+        proteins, _PROTEIN_GROUP_ERRPROB, "prot"
+    )
+    if pg_errprob_col is None:
+        pg_errprob_col = getattr(proteins, "errprob_column", None)
+        if pg_errprob_col is not None:
+            pg_errprob_col = f"prot.{pg_errprob_col}"
     if pg_errprob_col is not None:
         output_cols["Global.PG.PEP"] = _fns.col(pg_errprob_col)
         input_cols.add(pg_errprob_col)
