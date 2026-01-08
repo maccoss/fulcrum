@@ -47,6 +47,8 @@ def write_combined(
     threshold_col: _Optional[_Union[str, _Column]] = None,
     qval_thresh: float = None,
     include_decoys: bool = False,
+    peptide_kwargs: _Optional[dict] = None,
+    protein_kwargs: _Optional[dict] = None,
     **kwargs,
 ):
     """
@@ -77,12 +79,20 @@ def write_combined(
         ``wheely.mammoth.ConfidenceDataset`` or ``threshold_col`` is specified.
     include_decoys : bool
         (Optional) If true, include decoy PSMs in the output. Ignored if ``threshold_col`` is specified. Default: ``False``
+    peptide_kwargs : dict
+        Ignored
+    protein_kwargs : dict
+        Ignored
     kwargs :
         additional keyword arguments to pass to ``pyspark.sql.DataFrameWrite.parquet``.
         Defaults: ``{"mode": "errorifexists"}``
     """
     if proteins is None:
         raise ValueError("proteins dataset is required for combined output")
+    if peptide_kwargs:
+        _logger.warning("peptide_kwargs will be ignored: %s", peptide_kwargs)
+    if protein_kwargs:
+        _logger.warning("protein_kwargs will be ignored: %s", protein_kwargs)
 
     pep_filt = filter_psms(
         peptides,
