@@ -367,7 +367,7 @@ def write_combined(
         score_input_col = f"prot.{score_col}"
         if score_input_col not in input_cols:
             if score_col not in output_cols.keys():
-                output_cols[score_col] = _fns.col(score_input_col)
+                output_cols[f"PG.{score_col}"] = _fns.col(score_input_col)
             else:
                 # Avoid column name collision
                 _logger.warning(
