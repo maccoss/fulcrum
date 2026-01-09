@@ -452,11 +452,11 @@ def mbr_workflow(
             c: v
             for c, k in [
                 (
-                    firstpass_confs_inferred.peptide_column,
+                    base_conf.peptide_column,
                     firstpass_confs_inferred.peptide_column,
                 ),
                 (
-                    firstpass_confs_inferred.charge_column,
+                    base_conf.charge_column,
                     firstpass_confs_inferred.charge_column,
                 ),
                 ("library-qvalue", firstpass_confs_inferred.qvalue_column),
@@ -465,10 +465,10 @@ def mbr_workflow(
                     firstpass_confs_inferred.errprob_column,
                 ),
             ]
-            for v in [firstpass_confs_inferred.semantics.get(c, None)]
-            if v
+            if (v := firstpass_confs_inferred.semantics.get(k, None))
         },
     }
+
     confs_inferred = base_conf.with_data(
         base_conf.data.join(
             firstpass_confs_inferred.data.select(
