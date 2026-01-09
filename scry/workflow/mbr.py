@@ -30,6 +30,7 @@ from wheely.mammoth import (
 from wheely.mammoth.proteins import (
     ProteinDataset as _ProteinDataset,
 )
+from wheely.mammoth.semantics import PSM_PEPTIDE_QVALUE, PSM_PRECURSOR_QVALUE
 
 from ..output import (
     get_backend as _get_output_backend,
@@ -229,11 +230,16 @@ def mbr_workflow(
 
         lib_workflow = _get_workflow(lib_workflow)
 
-    if (
-        lib_pep_fdr_type := lib_params.get("cortado", dict()).get(
-            "pep_fdr_type", None
+    lib_pep_fdr_type = lib_params.get("cortado", dict()).get(
+        "pep_fdr_type", None
+    )
+    if lib_pep_fdr_type is None:
+        lib_pep_fdr_type = "precursor-only"
+        lib_params["cortado"] = dict(
+            lib_params["cortado"] or dict(),
+            pep_fdr_type=lib_pep_fdr_type,
         )
-    ) not in {"precursor-only", "peptide-only"}:
+    if lib_pep_fdr_type not in {"precursor-only", "peptide-only"}:
         _logger.warning(
             "Got unexpected library pep_fdr_type %s; proceed with caution!!!",
             lib_pep_fdr_type,
@@ -401,7 +407,8 @@ def mbr_workflow(
 
     conf_start = _time()
 
-    if (pep_fdr_type := cortado.get("pep_fdr_type", None)) != "psm-only":
+    pep_fdr_type = cortado.get("pep_fdr_type", None)
+    if pep_fdr_type != "psm-only":
         _logger.warning(
             "Got unexpected pep_fdr_type %s; proceed with caution!!!",
             pep_fdr_type,
@@ -439,6 +446,11 @@ def mbr_workflow(
                     base_conf.charge_column
                 ),
                 firstpass_confs_inferred.qvalues.alias("library-qvalue"),
+                *(
+                    firstpass_confs_inferred.errprobs.alias("library-errprob")
+                    for c in [firstpass_confs_inferred.errprob_column]
+                    if c
+                ),
                 "protein_group",
                 *(
                     c
@@ -460,6 +472,39 @@ def mbr_workflow(
         protein_column="protein_group",
         protein_delim=protein_delim,
         qvalue_column="combined-qvalue",
+        semantics={
+            **{
+                # Compute appropriate combined q-value semantics
+                # In the future we may want to use the semantics annotations from the
+                # datasets rather than relying on mapping from pep_fdr_type to semantic.
+                "combined-qvalue": v
+                for fdr_type, v in [
+                    ("precursor-only", PSM_PRECURSOR_QVALUE),
+                    ("peptide-only", PSM_PEPTIDE_QVALUE),
+                ]
+                if lib_pep_fdr_type == fdr_type and pep_fdr_type == "psm-only"
+            },
+            **{
+                c: v
+                for c, k in [
+                    (
+                        firstpass_confs_inferred.peptide_column,
+                        firstpass_confs_inferred.peptide_column,
+                    ),
+                    (
+                        firstpass_confs_inferred.charge_column,
+                        firstpass_confs_inferred.charge_column,
+                    ),
+                    ("library-qvalue", firstpass_confs_inferred.qvalue_column),
+                    (
+                        "library-errprob",
+                        firstpass_confs_inferred.errprob_column,
+                    ),
+                ]
+                for v in [firstpass_confs_inferred.semantics.get(c, None)]
+                if v
+            },
+        },
     )
 
     # Quantify peptides after they're annotated with groups, to simplify rollup
