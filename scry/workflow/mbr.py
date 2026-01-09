@@ -436,6 +436,39 @@ def mbr_workflow(
             100 * test_fdr,
         )
 
+    joined_semantic_overrides = {
+        **{
+            # Compute appropriate combined q-value semantics
+            # In the future we may want to use the semantics annotations from the
+            # datasets rather than relying on mapping from pep_fdr_type to semantic.
+            "combined-qvalue": v
+            for fdr_type, v in [
+                ("precursor-only", PSM_PRECURSOR_QVALUE),
+                ("peptide-only", PSM_PEPTIDE_QVALUE),
+            ]
+            if lib_pep_fdr_type == fdr_type and pep_fdr_type == "psm-only"
+        },
+        **{
+            c: v
+            for c, k in [
+                (
+                    firstpass_confs_inferred.peptide_column,
+                    firstpass_confs_inferred.peptide_column,
+                ),
+                (
+                    firstpass_confs_inferred.charge_column,
+                    firstpass_confs_inferred.charge_column,
+                ),
+                ("library-qvalue", firstpass_confs_inferred.qvalue_column),
+                (
+                    "library-errprob",
+                    firstpass_confs_inferred.errprob_column,
+                ),
+            ]
+            for v in [firstpass_confs_inferred.semantics.get(c, None)]
+            if v
+        },
+    }
     confs_inferred = base_conf.with_data(
         base_conf.data.join(
             firstpass_confs_inferred.data.select(
@@ -472,39 +505,24 @@ def mbr_workflow(
         protein_column="protein_group",
         protein_delim=protein_delim,
         qvalue_column="combined-qvalue",
-        semantics={
-            **{
-                # Compute appropriate combined q-value semantics
-                # In the future we may want to use the semantics annotations from the
-                # datasets rather than relying on mapping from pep_fdr_type to semantic.
-                "combined-qvalue": v
-                for fdr_type, v in [
-                    ("precursor-only", PSM_PRECURSOR_QVALUE),
-                    ("peptide-only", PSM_PEPTIDE_QVALUE),
-                ]
-                if lib_pep_fdr_type == fdr_type and pep_fdr_type == "psm-only"
-            },
-            **{
-                c: v
-                for c, k in [
-                    (
-                        firstpass_confs_inferred.peptide_column,
-                        firstpass_confs_inferred.peptide_column,
-                    ),
-                    (
-                        firstpass_confs_inferred.charge_column,
-                        firstpass_confs_inferred.charge_column,
-                    ),
-                    ("library-qvalue", firstpass_confs_inferred.qvalue_column),
-                    (
-                        "library-errprob",
-                        firstpass_confs_inferred.errprob_column,
-                    ),
-                ]
-                for v in [firstpass_confs_inferred.semantics.get(c, None)]
-                if v
-            },
-        },
+        semantics=joined_semantic_overrides,
+    )
+
+    _logger.debug(
+        "Semantics from first-pass dataset: %s",
+        firstpass_confs_inferred.semantics,
+    )
+    _logger.debug(
+        "Semantics from second-pass dataset: %s",
+        base_conf.semantics,
+    )
+    _logger.debug(
+        "Computed semantic overrides for joined dataset: %s",
+        joined_semantic_overrides,
+    )
+    _logger.debug(
+        "Semantics from joined dataset: %s",
+        confs_inferred.semantics,
     )
 
     # Quantify peptides after they're annotated with groups, to simplify rollup
