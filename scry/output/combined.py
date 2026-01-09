@@ -17,6 +17,7 @@ from wheely.mammoth import PsmDataset as _PsmDataset
 from wheely.mammoth.proteins import ProteinDataset as _ProteinDataset
 from wheely.mammoth.semantics import (
     NORMALIZED_RT_IN_SECONDS as _NORMALIZED_RT_IN_SECONDS,
+    NORMALIZED_XIC_AREA,
     PEPTIDE_ERRPROB as _PEPTIDE_ERRPROB,
     PEPTIDE_QVALUE as _PEPTIDE_QVALUE,
     PRECURSOR_ERRPROB as _PRECURSOR_ERRPROB,
@@ -31,6 +32,7 @@ from wheely.mammoth.semantics import (
     SCAN_NUMBER as _SCAN_NUMBER,
     THEORETICAL_MONO_MASS as _THEORETICAL_MONO_MASS,
     THEORETICAL_PRECURSOR_MZ as _THEORETICAL_PRECURSOR_MZ,
+    XIC_AREA,
 )
 
 from .util import filter_psms
@@ -329,16 +331,65 @@ def write_combined(
         output_cols["Global.PG.PEP"] = _fns.col(pg_errprob_col)
         input_cols.add(pg_errprob_col)
 
-    # Precursor.Quantity: from precursor dataset intensity column if available
-    # TODO: use semantics to resolve raw vs normalized intensity
-    pep_intensity_col = getattr(peptides, "intensity_column", "pep")
-    if pep_intensity_col is not None:
-        output_cols["Precursor.Quantity"] = _fns.col(pep_intensity_col)
-        input_cols.add(pep_intensity_col)
-    else:
-        raise ValueError(
-            "peptides dataset must have an intensity column for combined output"
-        )
+    # Logic for quantity is somewhat complex, as there are three possible sources of truth:
+    # - `PrecursorIntensityDataset.intensity_column`
+    # - `XIC_AREA` semantic
+    # - `NORMALIZED_XIC_AREA` semantic
+    # We would like to prioritize the semantics if available, to permit reporting both raw and normalized intensities.
+    # However, we should make an effort to always report as much intensity information as possible.
+
+    intensity_col = _get_column_by_semantic(peptides, XIC_AREA, "pep")
+    if intensity_col is not None:
+        output_cols["Precursor.Quantity"] = _fns.col(intensity_col)
+        input_cols.add(intensity_col)
+    norm_intensity_col = _get_column_by_semantic(
+        peptides, NORMALIZED_XIC_AREA, "pep"
+    )
+    if norm_intensity_col is not None:
+        output_cols["Precursor.Normalised"] = _fns.col(norm_intensity_col)
+        input_cols.add(norm_intensity_col)
+
+    dset_intensity_col = getattr(peptides, "intensity_column", None)
+    if dset_intensity_col is not None:
+        dset_intensity_col = f"pep.{dset_intensity_col}"
+        if dset_intensity_col not in input_cols:
+            # The dataset's intensity_column` was not already included via semantics -- decide what to do with it.
+
+            dset_intensity_semantic = peptides.semantics.get(
+                dset_intensity_col, None
+            )
+
+            if intensity_col is None and norm_intensity_col is None:
+                # No semantic intensity columns were found; report this one as `Precursor.Quantity`
+                output_cols["Precursor.Quantity"] = _fns.col(
+                    dset_intensity_col
+                )
+                input_cols.add(dset_intensity_col)
+
+                if dset_intensity_semantic is None:
+                    _logger.info(
+                        "Using PSM intensity_column '%s' with undefined semantics for Precursor.Quantity",
+                        dset_intensity_col,
+                    )
+                else:
+                    _logger.info(
+                        "Using PSM intensity_column '%s' with semantic '%s' for Precursor.Quantity",
+                        dset_intensity_col,
+                        dset_intensity_semantic,
+                    )
+            else:
+                # Simply log a warning that this column is being dropped to avoid confusion
+                if dset_intensity_semantic is None:
+                    _logger.warning(
+                        "PSM dataset's intensity_column '%s' with undefined semantics will be ignored",
+                        dset_intensity_col,
+                    )
+                else:
+                    _logger.warning(
+                        "PSM dataset's intensity_column '%s' with semantic '%s' will be ignored",
+                        dset_intensity_col,
+                        dset_intensity_semantic,
+                    )
 
     # PG.Quantity: from protein dataset intensity column if available
     # TODO: use semantics to resolve multiple roll-up quantities
