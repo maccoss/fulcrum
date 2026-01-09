@@ -117,7 +117,7 @@ def quantify_basic(
         res = res.with_data(
             res.data,
             semantics={
-                res.intensity_columns: _NORMALIZED_XIC_AREA,
+                res.intensity_column: _NORMALIZED_XIC_AREA,
             },
         )
 
