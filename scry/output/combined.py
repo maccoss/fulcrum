@@ -65,9 +65,45 @@ def write_combined(
 ):
     """
     Write combined peptide and protein information to Parquet.
-
     Joins peptide and protein datasets on ``protein_column`` and ``sample_column``,
     then writes aliased columns in a standard format.
+
+    This output backend provides a combined peptide-and-protein report similar to that of DIA-NN. Key columns are
+    named consistently in this report, regardless of the underlying names provided by the backend implementations.
+    Additional peptide and protein score columns are included in the output to provide additional scoring information.
+
+    Included columns:
+
+    - ``Run`` -- a string identifying the sample for each identification
+    - ``Protein.Group`` -- delimiter-separated protein identifiers for the PSM's assigned protein group
+    - ``Modified.Sequence`` -- the string representation of the modified peptide sequence
+    - ``Decoy`` -- whether the PSM is from a decoy peptide
+    - ``Precursor.Charge``
+    - ``Precursor.Mz`` -- theoretical precursor m/z
+    - ``Peptide.Mass`` -- theoretical uncharged monoisotopic mass of the peptide
+    - ``MS2.Scan`` -- the scan number of the identified peak apex MS2 scan
+    - ``RT`` -- the retention time of identified peak apex
+    - ``RT.Start`` -- the starting point of the identified peak RT bounds
+    - ``RT.Stop`` -- the ending point of the identified peak RT bound
+    - ``iRT`` -- the empirical retention time of the identified peak, transformed into library RT space
+    - ``Q.Value`` -- PSM-level _q_-value estimate
+    - ``PEP`` -- PSM-level posterior error probability estimate
+    - ``Global.Precursor.Q.Value`` -- precursor-level _q_-value estimate in the global context
+    - ``Global.Precursor.PEP`` -- precursor-level posterior error probability estimate in the global context
+    - ``Global.Peptide.Q.Value`` -- precursor-level _q_-value estimate in the global context
+    - ``Global.Peptide.PEP`` -- precursor-level posterior error probability estimate in the global context
+    - ``Global.PG.Q.Value`` -- protein group-level _q_-value estimate in the global context
+    - ``Global.PG.PEP`` -- protein group-level posterior error probability estimate in the global context
+    - ``Precursor.Quantity`` -- Raw PSM intensity (Note: for some quant backends this may be normalized PSM intensity,
+                                in which case a log message may include more information about its content)
+    - ``Precursor.Normalised`` -- Normalized PSM intensity
+    - ``PG.Quantity`` -- rolled-up protein group quantity
+    - ``*`` -- additional columns give PSM-level identification scores
+    - ``PG.*`` -- additional columns with the ``PG`` prefix give protein group-level identification scores
+
+    **Note:** Some of these columns will only be included if they are computed by the workflow and selected backends.
+    For example, in common usage only one of ``Global.Precursor.Q.Value`` and ``Global.Peptide.Q.Value`` will be
+    reported, depending on the configured ``cortado.pep_fdr_type``
 
     **Filtering** -- The ``qval_thresh`` and ``include_decoys`` parameters allow convenient filtering of output
     PSMs or proteins.
