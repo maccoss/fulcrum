@@ -24,6 +24,7 @@ from wheely.mammoth.semantics import (
     PRECURSOR_QVALUE as _PRECURSOR_QVALUE,
     PROTEIN_GROUP_ERRPROB as _PROTEIN_GROUP_ERRPROB,
     PROTEIN_GROUP_QVALUE as _PROTEIN_GROUP_QVALUE,
+    PROTEOTYPIC_PEPTIDE as _PROTEOTYPIC_PEPTIDE,
     PSM_ERRPROB as _PSM_ERRPROB,
     PSM_QVALUE as _PSM_QVALUE,
     RT_IN_SECONDS as _RT_IN_SECONDS,
@@ -77,6 +78,7 @@ def write_combined(
     - ``Run`` -- a string identifying the sample for each identification
     - ``Protein.Group`` -- delimiter-separated protein identifiers for the PSM's assigned protein group
     - ``Modified.Sequence`` -- the string representation of the modified peptide sequence
+    - ``Proteotypic`` -- if the peptide is proteotypic (uniquely maps to the protein group)
     - ``Decoy`` -- whether the PSM is from a decoy peptide
     - ``Precursor.Charge``
     - ``Precursor.Mz`` -- theoretical precursor m/z
@@ -204,6 +206,14 @@ def write_combined(
         f"pep.{peptides.peptide_column}"
     )
     input_cols.add(f"pep.{peptides.peptide_column}")
+
+    # Proteotypic: from semantic, if available
+    proteotypic_col = _get_column_by_semantic(
+        peptides, _PROTEOTYPIC_PEPTIDE, "pep"
+    )
+    if proteotypic_col is not None:
+        output_cols["Proteotypic"] = _fns.col(proteotypic_col)
+        input_cols.add(proteotypic_col)
 
     # Decoy: from is_decoy_column
     target_column = f"pep.{peptides.target_column}"
