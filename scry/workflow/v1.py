@@ -32,6 +32,9 @@ from wheely.mammoth.proteins import (
     ProteinConfidenceDataset as _ProteinConfidenceDataset,
     ProteinDataset as _ProteinDataset,
 )
+from wheely.mammoth.semantics import (
+    PROTEOTYPIC_PEPTIDE as _PROTEOTYPIC_PEPTIDE,
+)
 from ..quant.protein.util import (
     merge_protein_confidence_and_quant as _merge_protein_confidence_and_quant,
 )
@@ -294,6 +297,9 @@ def scry_v1(
         ),
         protein_column="protein_group",
         protein_delim=protein_delim,
+        semantics={
+            "proteotypic": _PROTEOTYPIC_PEPTIDE,
+        },
     )
 
     # Compute protein FDR by rescoring protein groups

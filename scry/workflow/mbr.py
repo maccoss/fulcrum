@@ -30,7 +30,11 @@ from wheely.mammoth import (
 from wheely.mammoth.proteins import (
     ProteinDataset as _ProteinDataset,
 )
-from wheely.mammoth.semantics import PSM_PEPTIDE_QVALUE, PSM_PRECURSOR_QVALUE
+from wheely.mammoth.semantics import (
+    PROTEOTYPIC_PEPTIDE as _PROTEOTYPIC_PEPTIDE,
+    PSM_PEPTIDE_QVALUE as _PSM_PEPTIDE_QVALUE,
+    PSM_PRECURSOR_QVALUE as _PSM_PRECURSOR_QVALUE,
+)
 
 from ..output import (
     get_backend as _get_output_backend,
@@ -306,6 +310,9 @@ def mbr_workflow(
         ),
         protein_column="protein_group",
         protein_delim=protein_delim,
+        semantics={
+            "proteotypic": _PROTEOTYPIC_PEPTIDE,
+        },
     )
 
     # Compute protein FDR by rescoring protein groups
@@ -443,8 +450,8 @@ def mbr_workflow(
             # datasets rather than relying on mapping from pep_fdr_type to semantic.
             "combined-qvalue": v
             for fdr_type, v in [
-                ("precursor-only", PSM_PRECURSOR_QVALUE),
-                ("peptide-only", PSM_PEPTIDE_QVALUE),
+                ("precursor-only", _PSM_PRECURSOR_QVALUE),
+                ("peptide-only", _PSM_PEPTIDE_QVALUE),
             ]
             if lib_pep_fdr_type == fdr_type and pep_fdr_type == "psm-only"
         },
@@ -464,6 +471,7 @@ def mbr_workflow(
                     "library-errprob",
                     firstpass_confs_inferred.errprob_column,
                 ),
+                ("proteotypic", "proteotypic"),
             ]
             if (v := firstpass_confs_inferred.semantics.get(k, None))
         },
