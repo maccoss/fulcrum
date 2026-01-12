@@ -20,6 +20,7 @@ from wheely.mammoth.semantics import (
     NORMALIZED_XIC_AREA,
     PEPTIDE_ERRPROB as _PEPTIDE_ERRPROB,
     PEPTIDE_QVALUE as _PEPTIDE_QVALUE,
+    PEPTIDOFORM_SEQUENCE,
     PRECURSOR_ERRPROB as _PRECURSOR_ERRPROB,
     PRECURSOR_QVALUE as _PRECURSOR_QVALUE,
     PROTEIN_GROUP_ERRPROB as _PROTEIN_GROUP_ERRPROB,
@@ -31,6 +32,7 @@ from wheely.mammoth.semantics import (
     RT_START_IN_SECONDS as _RT_START_IN_SECONDS,
     RT_STOP_IN_SECONDS as _RT_STOP_IN_SECONDS,
     SCAN_NUMBER as _SCAN_NUMBER,
+    STRIPPED_SEQUENCE,
     THEORETICAL_MONO_MASS as _THEORETICAL_MONO_MASS,
     THEORETICAL_PRECURSOR_MZ as _THEORETICAL_PRECURSOR_MZ,
     XIC_AREA,
@@ -78,6 +80,8 @@ def write_combined(
     - ``Run`` -- a string identifying the sample for each identification
     - ``Protein.Group`` -- delimiter-separated protein identifiers for the PSM's assigned protein group
     - ``Modified.Sequence`` -- the string representation of the modified peptide sequence
+    - ``Stripped.Sequence`` -- the string representation of the unmodified peptide sequence
+    - ``Peptide.ID`` -- the unique identifier for this modified peptide sequence (if different from ``Modified.Sequence``)
     - ``Proteotypic`` -- if the peptide is proteotypic (uniquely maps to the protein group)
     - ``Decoy`` -- whether the PSM is from a decoy peptide
     - ``Precursor.Charge``
@@ -200,6 +204,41 @@ def write_combined(
     # TODO: use semantics to resolve grouped vs all proteins
     output_cols["Protein.Group"] = _fns.col(f"pep.{peptides.protein_column}")
     input_cols.add(f"pep.{peptides.protein_column}")
+
+    # Peptide Sequence: we have three possible sources of information:
+    # - peptide_column
+    # - peptidoform sequence semantic
+    # - stripped sequence semantic
+    #
+    # We want to prioritize the semantics to ensure the column names
+    # are semantically meaningful, but should always include the peptide_column
+    # because of its importance in the pipeline.
+    # Thus, we check the semantics first. If the peptide_column does not have
+    # either expected semantic, we either assume it's a modified sequence, or
+    # we call it "Peptide.ID"
+
+    mod_seq_col = _get_column_by_semantic(
+        peptides, PEPTIDOFORM_SEQUENCE, "pep"
+    )
+    if mod_seq_col is not None:
+        output_cols["Modified.Sequence"] = mod_seq_col
+        input_cols.add(mod_seq_col)
+
+    strip_seq_col = _get_column_by_semantic(peptides, STRIPPED_SEQUENCE, "pep")
+    if strip_seq_col is not None:
+        output_cols["Stripped.Sequence"] = strip_seq_col
+        input_cols.add(strip_seq_col)
+
+    pep_col = f"pep.{peptides.peptide_column}"
+    if pep_col not in {mod_seq_col, strip_seq_col}:
+        # peptide_column was not already included via semantics
+        if mod_seq_col is None:
+            # Assume peptide_column is modified sequence
+            output_cols["Modified.Sequence"] = _fns.col(pep_col)
+            input_cols.add(pep_col)
+        else:
+            output_cols["Peptide.ID"] = _fns.col(pep_col)
+            input_cols.add(pep_col)
 
     # Modified.Sequence: from peptide_column
     output_cols["Modified.Sequence"] = _fns.col(
