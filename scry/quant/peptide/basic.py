@@ -17,6 +17,10 @@ from wheely.mammoth import (
     PsmIntensityDataset,
     PsmIntensityConfidenceDataset,
 )
+from wheely.mammoth.semantics import (
+    NORMALIZED_XIC_AREA as _NORMALIZED_XIC_AREA,
+    XIC_AREA as _XIC_AREA,
+)
 
 from ..normalization import get_backend as _get_normalization_backend
 
@@ -81,7 +85,13 @@ def quantify_basic(
         target_column=dset.target_column,
         protein_column=dset.protein_column,
         protein_delim=dset.protein_delim,
-        semantics=dset.semantics,
+        # If the dataset already defines the intensity column's semantics, preserve that annotation
+        semantics=dict(
+            {
+                intensity_column: _XIC_AREA,
+            },
+            **dset.semantics,
+        ),
     )
 
     if isinstance(dset, ConfidenceDataset):
@@ -103,5 +113,12 @@ def quantify_basic(
             norm_backend = _get_normalization_backend(norm_backend)
 
         res = norm_backend(res, **normalization)
+
+        res = res.with_data(
+            res.data,
+            semantics={
+                res.intensity_column: _NORMALIZED_XIC_AREA,
+            },
+        )
 
     return res

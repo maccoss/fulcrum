@@ -9,6 +9,7 @@ import logging as _logging
 from importlib_metadata import entry_points
 
 from .basic import write_csv, write_parquet
+from .combined import write_combined
 from .library import write_library
 
 _logger = _logging.getLogger(__name__)
@@ -16,6 +17,7 @@ _logger = _logging.getLogger(__name__)
 _backends = {
     "write_csv": write_csv,
     "write_parquet": write_parquet,
+    "combined": write_combined,
     "write_library": write_library,
 }
 _plugins = None

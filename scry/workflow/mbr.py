@@ -3,48 +3,49 @@
 """
 
 import copy as _copy
+import json as _json
 import logging as _logging
 from time import time as _time
 from typing import (
     Any as _Any,
-    Callable as _Callable,
     Dict as _Dict,
     Optional as _Optional,
     Tuple as _Tuple,
     Union as _Union,
 )
 
-import json as _json
-import toml as _toml
 import polars as _pl
+from airpot import BrewResult as _BrewResult, brew as _brew
+from cortado import assign_confidence as _assign_confidence
+from cortado.protein import score_proteins as _score_proteins
+from proffer.spark import infer_spark as _infer_spark
 from pyspark.sql import (
     SparkSession as _SparkSession,
     functions as _fns,
 )
 
-from airpot import (
-    brew as _brew,
-    BrewResult as _BrewResult,
-    RescoringResult as _RescoringResult,
-)
-from cortado import assign_confidence as _assign_confidence
-from cortado.protein import score_proteins as _score_proteins
-from proffer.spark import infer_spark as _infer_spark
 from wheely.mammoth import (
     PsmDataset as _PsmDataset,
-    ConfidenceDataset as _ConfidenceDataset,
 )
 from wheely.mammoth.proteins import (
     ProteinDataset as _ProteinDataset,
 )
+from wheely.mammoth.semantics import (
+    PROTEOTYPIC_PEPTIDE as _PROTEOTYPIC_PEPTIDE,
+    PSM_PEPTIDE_QVALUE as _PSM_PEPTIDE_QVALUE,
+    PSM_PRECURSOR_QVALUE as _PSM_PRECURSOR_QVALUE,
+)
 
-from ..search import (
-    get_backend as _get_search_backend,
+from ..output import (
+    get_backend as _get_output_backend,
 )
 from ..quant.peptide import get_backend as _get_peptide_quant_backend
 from ..quant.protein import get_backend as _get_protein_rollup_backend
-from ..output import (
-    get_backend as _get_output_backend,
+from ..quant.protein.util import (
+    merge_protein_confidence_and_quant as _merge_protein_confidence_and_quant,
+)
+from ..search import (
+    get_backend as _get_search_backend,
 )
 
 _logger = _logging.getLogger(__name__)
@@ -233,11 +234,16 @@ def mbr_workflow(
 
         lib_workflow = _get_workflow(lib_workflow)
 
-    if (
-        lib_pep_fdr_type := lib_params.get("cortado", dict()).get(
-            "pep_fdr_type", None
+    lib_pep_fdr_type = lib_params.get("cortado", dict()).get(
+        "pep_fdr_type", None
+    )
+    if lib_pep_fdr_type is None:
+        lib_pep_fdr_type = "precursor-only"
+        lib_params["cortado"] = dict(
+            lib_params["cortado"] or dict(),
+            pep_fdr_type=lib_pep_fdr_type,
         )
-    ) not in {"precursor-only", "peptide-only"}:
+    if lib_pep_fdr_type not in {"precursor-only", "peptide-only"}:
         _logger.warning(
             "Got unexpected library pep_fdr_type %s; proceed with caution!!!",
             lib_pep_fdr_type,
@@ -304,6 +310,9 @@ def mbr_workflow(
         ),
         protein_column="protein_group",
         protein_delim=protein_delim,
+        semantics={
+            "proteotypic": _PROTEOTYPIC_PEPTIDE,
+        },
     )
 
     # Compute protein FDR by rescoring protein groups
@@ -405,7 +414,8 @@ def mbr_workflow(
 
     conf_start = _time()
 
-    if (pep_fdr_type := cortado.get("pep_fdr_type", None)) != "psm-only":
+    pep_fdr_type = cortado.get("pep_fdr_type", None)
+    if pep_fdr_type != "psm-only":
         _logger.warning(
             "Got unexpected pep_fdr_type %s; proceed with caution!!!",
             pep_fdr_type,
@@ -433,6 +443,40 @@ def mbr_workflow(
             100 * test_fdr,
         )
 
+    joined_semantic_overrides = {
+        **{
+            # Compute appropriate combined q-value semantics
+            # In the future we may want to use the semantics annotations from the
+            # datasets rather than relying on mapping from pep_fdr_type to semantic.
+            "combined-qvalue": v
+            for fdr_type, v in [
+                ("precursor-only", _PSM_PRECURSOR_QVALUE),
+                ("peptide-only", _PSM_PEPTIDE_QVALUE),
+            ]
+            if lib_pep_fdr_type == fdr_type and pep_fdr_type == "psm-only"
+        },
+        **{
+            c: v
+            for c, k in [
+                (
+                    base_conf.peptide_column,
+                    firstpass_confs_inferred.peptide_column,
+                ),
+                (
+                    base_conf.charge_column,
+                    firstpass_confs_inferred.charge_column,
+                ),
+                ("library-qvalue", firstpass_confs_inferred.qvalue_column),
+                (
+                    "library-errprob",
+                    firstpass_confs_inferred.errprob_column,
+                ),
+                ("proteotypic", "proteotypic"),
+            ]
+            if (v := firstpass_confs_inferred.semantics.get(k, None))
+        },
+    }
+
     confs_inferred = base_conf.with_data(
         base_conf.data.join(
             firstpass_confs_inferred.data.select(
@@ -443,6 +487,11 @@ def mbr_workflow(
                     base_conf.charge_column
                 ),
                 firstpass_confs_inferred.qvalues.alias("library-qvalue"),
+                *(
+                    firstpass_confs_inferred.errprobs.alias("library-errprob")
+                    for c in [firstpass_confs_inferred.errprob_column]
+                    if c
+                ),
                 "protein_group",
                 *(
                     c
@@ -464,6 +513,24 @@ def mbr_workflow(
         protein_column="protein_group",
         protein_delim=protein_delim,
         qvalue_column="combined-qvalue",
+        semantics=joined_semantic_overrides,
+    )
+
+    _logger.debug(
+        "Semantics from first-pass dataset: %s",
+        firstpass_confs_inferred.semantics,
+    )
+    _logger.debug(
+        "Semantics from second-pass dataset: %s",
+        base_conf.semantics,
+    )
+    _logger.debug(
+        "Computed semantic overrides for joined dataset: %s",
+        joined_semantic_overrides,
+    )
+    _logger.debug(
+        "Semantics from joined dataset: %s",
+        confs_inferred.semantics,
     )
 
     # Quantify peptides after they're annotated with groups, to simplify rollup
@@ -503,32 +570,9 @@ def mbr_workflow(
         rollup_end - rollup_start,
     )
 
-    protein_result = prot_conf.with_data(
-        prot_conf.data.join(
-            prot_quant_dset.data.select(
-                (
-                    # To match the handling of protein group IDs above, we must join group IDs into strings
-                    _fns.array_join(
-                        _fns.array_sort(
-                            _fns.array_distinct(
-                                prot_quant_dset.proteins
-                                if prot_quant_dset.protein_delim is None
-                                else _fns.split(
-                                    prot_quant_dset.proteins,
-                                    prot_quant_dset.protein_delim,
-                                )
-                            )
-                        ),
-                        protein_delim,
-                    )
-                ).alias(prot_conf.protein_column),
-                prot_quant_dset.samples,
-                prot_quant_dset.intensities,
-            ),
-            on=prot_conf.protein_column,
-            how="leftouter",
-        ),
-        protein_delim=protein_delim,
+    # Merge global protein confidence with per-sample quantifications
+    protein_result = _merge_protein_confidence_and_quant(
+        prot_conf, prot_quant_dset
     )
 
     # Get output backend
