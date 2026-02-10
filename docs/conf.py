@@ -6,8 +6,8 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "Scry"
-copyright = "2024, Seer, Inc."
+project = "Fulcrum Pipeline"
+copyright = "2026, Seer, Inc."
 author = "Seer, Inc."
 
 # -- General configuration ---------------------------------------------------
@@ -25,7 +25,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 language = "en"
 
-autoapi_dirs = ["../scry"]
+autoapi_dirs = ["../fulcrum"]
 autoapi_options = [
     "members",
     "undoc-members",
