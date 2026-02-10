@@ -2,7 +2,7 @@ import pytest
 
 import pyspark.sql.functions as fns
 
-from scry.output.util import filter_psms
+from fulcrum.output.util import filter_psms
 
 from ...conftest import rand
 from .library.test_write import spectra_dataset

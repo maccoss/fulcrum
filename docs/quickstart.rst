@@ -79,6 +79,54 @@ Usage is similar from a REPL or notebook interface:
 .. code:: pycon
 
    >>> import logging; logging.getLogger().setLevel("INFO")
+         >>> from fulcrum import fulcrum
+         >>> scry(
+         ...   workflow = "v0",
+         ...   search = dict(
+         ...     backend = "read_existing",
+         ...     engine = "encyclopedia",
+         ...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+         ...   )
+         ... )
+         INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+         INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
+         INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+         INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+         INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+
+      For full documentation, see :py
+      >>> from scry import scry
+      >>> scry(
+      ...   workflow = "v0",
+      ...   search = dict(
+      ...     backend = "read_existing",
+      ...     engine = "encyclopedia",
+      ...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+      ...   )
+      ... )
+      INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+      INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
+      INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+      INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+      INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+
+   For full documentation, see :py
+      >>> from fulcrum import scry
+      >>> scry(
+      ...   workflow = "v0",
+      ...   search = dict(
+      ...     backend = "read_existing",
+      ...     engine = "encyclopedia",
+      ...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
+      ...   )
+      ... )
+      INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+      INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
+      INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+      INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+      INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+
+   For full documentation, see :py
    >>> from scry import scry
    >>> scry(
    ...   workflow = "v0",

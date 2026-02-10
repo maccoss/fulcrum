@@ -5,7 +5,7 @@ import pytest
 
 from wheely.mammoth.dataset import PsmIntensityConfidenceDataset
 
-from scry.quant.normalization.util import *
+from fulcrum.quant.normalization.util import *
 
 
 @pytest.mark.parametrize("filter_qvals", [True, False])

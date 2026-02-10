@@ -1,6 +1,6 @@
 <img alt="scry logo" src="./docs/_static/scry-logo.png" height="128" align="left" style="margin: 8px">
 
-**Scry** is a search pipeline for extreme-scale proteomics
+**Fulcrum** is a search pipeline for extreme-scale proteomics
 experiments. It's based on composable, modular implementations using Spark to
 attain near-infinite scalability.
 
@@ -9,7 +9,7 @@ attain near-infinite scalability.
 This library requires Python 3.8+ and can be installed with pip:  
 
 ```shell
-pip install scry-ms
+pip install fulcrum-ms
 ```
 
 You may also need to install Java if you intend to run Scry workflows locally.
@@ -27,9 +27,9 @@ When invoking Scry you should specify the `SparkSession` in use using the
 `spark` keyword parameter:
 
 ```python
-from scry import scry
+from fulcrum import fulcrum
 
-scry(spark=spark, **params)
+fulcrum(spark=spark, **params)
 ```
 
 ## CLI Usage
