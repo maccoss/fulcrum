@@ -1,4 +1,4 @@
-<img alt="scry logo" src="./docs/_static/scry-logo.png" height="128" align="left" style="margin: 8px">
+<img alt="fulcrum logo" src="./docs/_static/fulcrum-logo.png" height="128" align="left" style="margin: 8px">
 
 **Fulcrum Pipeline**™ is a search pipeline for extreme-scale proteomics
 experiments. It's based on composable, modular implementations using Spark to

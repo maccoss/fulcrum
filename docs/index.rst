@@ -1,11 +1,11 @@
 Fulcrum Pipeline documentation
 ==============================
 
-.. image:: _static/scry-logo.png
+.. image:: _static/fulcrum-logo.png
    :height: 128px
-   :alt: The logo of Scry, showing a crystal ball sitting on a marble column
+   :alt: The logo of Fulcrum
 
-**Fulcrum Pipeline**™ is a tool for extreme-scale
+**Fulcrum Pipeline™** is a tool for extreme-scale
 proteomics experiments. It's based on composable, modular
 implementations using Spark to attain near-infinite scalability.
 
