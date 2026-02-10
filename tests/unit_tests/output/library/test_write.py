@@ -14,8 +14,8 @@ from wheely.mammoth.spectra import (
     PeaklistType,
 )
 
-from scry.output.library import write_library
-from scry.output.library.write import (
+from fulcrum.output.library import write_library
+from fulcrum.output.library.write import (
     _normalize_peptides,
 )
 

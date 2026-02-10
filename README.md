@@ -1,44 +1,44 @@
-<img alt="scry logo" src="./docs/_static/scry-logo.png" height="128" align="left" style="margin: 8px">
+<img alt="fulcrum logo" src="./docs/_static/fulcrum-logo.png" height="128" align="left" style="margin: 8px">
 
-**Scry** is a search pipeline for extreme-scale proteomics
+**Fulcrum Pipeline**™ is a search pipeline for extreme-scale proteomics
 experiments. It's based on composable, modular implementations using Spark to
 attain near-infinite scalability.
 
 ## Installation  
 
-This library requires Python 3.8+ and can be installed with pip:  
+This library requires Python 3.10+ and can be installed with `pip`:  
 
 ```shell
-pip install scry-ms
+pip install fulcrum-ms
 ```
 
-You may also need to install Java if you intend to run Scry workflows locally.
+You may also need to install Java if you intend to run workflows locally.
 
-## Using Scry on Databricks
+## Using Fulcrum on Databricks
 
-Scry is built to quickly run in a Databricks notebook environment. After setting
+Fulcrum is built to quickly run in a Databricks notebook environment. After setting
 up a cluster, you can install directly from your notebook:
 
 ```
-%pip install scry-ms
+%pip install fulcrum-ms
 ```
 
-When invoking Scry you should specify the `SparkSession` in use using the
+When invoking Fulcrum you should specify the `SparkSession` in use using the
 `spark` keyword parameter:
 
 ```python
-from scry import scry
+from fulcrum import fulcrum
 
-scry(spark=spark, **params)
+fulcrum(spark=spark, **params)
 ```
 
 ## CLI Usage
 
-Scry includes a CLI that permits running a workflow using TOML
+Fulcrum includes a CLI that permits running a workflow using TOML
 parameters:
 
 ``` shell
-scry -v --param-toml '
+fulcrum -v --param-toml '
 workflow = "v0"
 
 [search]
@@ -52,7 +52,7 @@ The CLI will accept JSON or TOML as either a string or a file:
 
 ``` shell
 # JSON string
-scry --param-json '{
+fulcrum --param-json '{
     "workflow": "v0",
     "search": {
       "backend": "read_existing",
@@ -62,21 +62,21 @@ scry --param-json '{
 }'
 
 # JSON file
-scry --json-file path/to/file.json
+fulcrum --json-file path/to/file.json
 
 # TOML file
-scry --toml-file path/to/file.toml
+fulcrum --toml-file path/to/file.toml
 ```
 
 ## Python Usage
 
-The full flexibility of Scry is available through the Python library's
-`scry` function. Usage is similar from a REPL or notebook interface:
+The full flexibility of Fulcrum is available through the Python library's
+`fulcrum` function. Usage is similar from a REPL or notebook interface:
 
 ``` pycon
 >>> import logging; logging.getLogger().setLevel("INFO")
->>> from scry import scry
->>> scry(
+>>> from fulcrum import fulcrum
+>>> fulcrum(
 ...   workflow = "v0",
 ...   search = dict(
 ...     backend = "read_existing",
@@ -84,11 +84,11 @@ The full flexibility of Scry is available through the Python library's
 ...     location = "data/2017dec27_overlap_dia_6b_rep1_604to616.dia.features.txt",
 ...   )
 ... )
-INFO:scry.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
-INFO:scry.workflow.v0:Built rescoring model in 3.57 sec
-INFO:scry.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
-INFO:scry.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
-INFO:scry.workflow.v0:Found 522 PSMs or peptides at 1% FDR
+INFO:fulcrum.workflow.v0:Search stage found 1770 PSMs in 4.24 sec
+INFO:fulcrum.workflow.v0:Built rescoring model in 3.57 sec
+INFO:fulcrum.workflow.v0:Assigning confidence across the dataset using "mokapot score" (ascending)
+INFO:fulcrum.workflow.v0:Assigned confidence to 832 PSMs or peptides in 2.81 sec
+INFO:fulcrum.workflow.v0:Found 522 PSMs or peptides at 1% FDR
 ```
 
 ## Configuring Spark
@@ -102,18 +102,18 @@ appropriate `spark_config` section in the workflow parameters:
 "driver.memory"="4g"
 ```
 
-When calling Scry from Python, you can either specify a
+When calling Fulcrum from Python, you can either specify a
 [spark_config]{.title-ref} or pass a `SparkSession`{.interpreted-text
 role="py:class"} using the [spark]{.title-ref} parameter.
 
 ``` python
-scry(
+fulcrum(
     spark=spark_session,
 )
 
 # OR
 
-scry(
+fulcrum(
     spark_config={
         "spark.master": "local[*]",
         "driver.memory": "4g",

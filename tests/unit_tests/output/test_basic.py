@@ -8,7 +8,7 @@ from typing import Union
 from wheely.mammoth import PsmDataset, ConfidenceDataset
 from wheely.mammoth.proteins import ProteinDataset, ProteinConfidenceDataset
 
-from scry.output.basic import write_csv, write_parquet
+from fulcrum.output.basic import write_csv, write_parquet
 
 
 @pytest.fixture(
@@ -31,7 +31,7 @@ def test_write_csv(tmp_path, dataset):
     """
     Test that writing CSV results is successful.
     """
-    loc = str(tmp_path / "test-scry-output")
+    loc = str(tmp_path / "test-output")
 
     write_csv(
         dataset,
@@ -55,7 +55,7 @@ def test_write_parquet(tmp_path, dataset):
     """
     Test that writing CSV results is successful.
     """
-    loc = str(tmp_path / "test-scry-output")
+    loc = str(tmp_path / "test-output")
 
     write_parquet(
         dataset,
