@@ -163,6 +163,14 @@ def quantify_proteins_directlfq(
 
         _lfq_config.setup_logging = lambda *_, **__: ()
 
+        # Check if we have to copy numpy arrays derived from pandas using directlfq's built-in logic
+        _lfq_config.check_wether_to_copy_numpy_arrays_derived_from_pandas()
+
+        # Even if directlfq doesn't need to copy, check if we should set the flag for our data
+        if not _lfq_config.COPY_NUMPY_ARRAYS_DERIVED_FROM_PANDAS:
+            if not wide.to_numpy(copy=False).flags.writeable:
+                _lfq_config.COPY_NUMPY_ARRAYS_DERIVED_FROM_PANDAS = True
+
         from directlfq.protein_intensity_estimation import (
             estimate_protein_intensities,
         )
