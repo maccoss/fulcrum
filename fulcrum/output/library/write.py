@@ -14,6 +14,7 @@ from typing import (
 )
 
 import csv as _csv
+import fsspec as _fsspec
 import pandas as _pd
 from pyspark.sql import (
     Column as _Column,
@@ -330,7 +331,7 @@ def write_library(
         # Cast to avoid warning from mypy
         df: _pd.DataFrame = _cast(_pd.DataFrame, output.toPandas())
 
-        with open(location, "w") as out:
+        with _fsspec.open(location, "w") as out:
             df.to_csv(
                 out,
                 sep="\t",
