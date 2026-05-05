@@ -427,6 +427,7 @@ def write_combined(
     if intensity_col is not None:
         output_cols["Precursor.Quantity"] = _fns.col(intensity_col)
         input_cols.add(intensity_col)
+
     norm_intensity_col = _get_column_by_semantic(
         peptides, NORMALIZED_XIC_AREA, "pep"
     )
@@ -434,46 +435,79 @@ def write_combined(
         output_cols["Precursor.Normalised"] = _fns.col(norm_intensity_col)
         input_cols.add(norm_intensity_col)
 
-    dset_intensity_col = getattr(peptides, "intensity_column", None)
-    if dset_intensity_col is not None:
-        dset_intensity_col = f"pep.{dset_intensity_col}"
-        if dset_intensity_col not in input_cols:
+    _dset_intensity_col = getattr(peptides, "intensity_column", None)
+    dset_intensity_cols = getattr(peptides, "intensity_columns", None)
+    if dset_intensity_cols is not None:
+        if _dset_intensity_col in dset_intensity_cols:
+            # Expected case -- primary column is in list
+            pass
+        else:
+            dset_intensity_cols = [_dset_intensity_col, *dset_intensity_cols]
+    elif _dset_intensity_col is not None:
+        dset_intensity_cols = [_dset_intensity_col]
+    else:
+        dset_intensity_cols = []
+
+    have_primary_intensity = (
+        intensity_col is not None or norm_intensity_col is not None
+    )
+
+    for _addl_inten_col in dset_intensity_cols:
+        addl_inten_semantic = peptides.semantics.get(_addl_inten_col, None)
+
+        addl_inten_col = f"pep.{_addl_inten_col}"
+        if addl_inten_col not in input_cols:
             # The dataset's intensity_column` was not already included via semantics -- decide what to do with it.
 
-            dset_intensity_semantic = peptides.semantics.get(
-                dset_intensity_col, None
-            )
-
-            if intensity_col is None and norm_intensity_col is None:
+            if not have_primary_intensity:
                 # No semantic intensity columns were found; report this one as `Precursor.Quantity`
-                output_cols["Precursor.Quantity"] = _fns.col(
-                    dset_intensity_col
-                )
-                input_cols.add(dset_intensity_col)
+                output_cols["Precursor.Quantity"] = _fns.col(addl_inten_col)
+                input_cols.add(addl_inten_col)
 
-                if dset_intensity_semantic is None:
+                if addl_inten_semantic is None:
                     _logger.info(
                         "Using PSM intensity_column '%s' with undefined semantics for Precursor.Quantity",
-                        dset_intensity_col,
+                        addl_inten_col,
                     )
                 else:
                     _logger.info(
                         "Using PSM intensity_column '%s' with semantic '%s' for Precursor.Quantity",
-                        dset_intensity_col,
-                        dset_intensity_semantic,
+                        addl_inten_col,
+                        addl_inten_semantic,
+                    )
+
+                have_primary_intensity = True
+            elif (
+                addl_inten_col not in input_cols
+                and _addl_inten_col not in output_cols
+            ):
+                # Column is not yet included and does not conflict with output columns
+                output_cols[_addl_inten_col] = _fns.col(addl_inten_col)
+                input_cols.add(addl_inten_col)
+
+                if addl_inten_semantic is None:
+                    _logger.info(
+                        "Using PSM intensity_column '%s' with undefined semantics",
+                        addl_inten_col,
+                    )
+                else:
+                    _logger.info(
+                        "Using PSM intensity_column '%s' with semantic '%s'",
+                        addl_inten_col,
+                        addl_inten_semantic,
                     )
             else:
                 # Simply log a warning that this column is being dropped to avoid confusion
-                if dset_intensity_semantic is None:
+                if addl_inten_semantic is None:
                     _logger.warning(
                         "PSM dataset's intensity_column '%s' with undefined semantics will be ignored",
-                        dset_intensity_col,
+                        addl_inten_col,
                     )
                 else:
                     _logger.warning(
                         "PSM dataset's intensity_column '%s' with semantic '%s' will be ignored",
-                        dset_intensity_col,
-                        dset_intensity_semantic,
+                        addl_inten_col,
+                        addl_inten_semantic,
                     )
 
     # PG.Quantity: from protein dataset intensity column if available
