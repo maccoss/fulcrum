@@ -213,7 +213,7 @@ def mbr_workflow(
         ] = "precursor-only"
     if "output" not in lib_params:
         lib_params["output"] = dict(
-            backend="write_lib_params",
+            backend="write_library",
         )
     if "qval_thresh" not in lib_params["output"]:
         lib_params["output"]["qval_thresh"] = 0.01
