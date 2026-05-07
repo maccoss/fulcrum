@@ -18,6 +18,10 @@ from pyspark.sql import (
     functions as _fns,
 )
 from wheely.mammoth import ConfidenceDataset as _ConfidenceDataset
+from wheely.mammoth.semantics import (
+    NORMALIZED_XIC_AREA as _NORMALIZED_XIC_AREA,
+    XIC_AREA as _XIC_AREA,
+)
 
 _ReductionLike = _Union[str, _Callable[[_Column], _Column]]
 
@@ -148,6 +152,133 @@ def _normalize_intensity_column_map(
         seen_outputs.add(output_column)
 
     return normalized
+
+
+def _resolve_rollup_output_intensity_columns(
+    dataset: _Any,
+    *,
+    prefix: str = "",
+) -> tuple[dict[str, str], str, dict[str, _Any]]:
+    """
+    Resolve source intensity tracks to output names for rollup wrappers.
+
+    Naming is semantic-first, with a primary-column fallback:
+
+    - the first intensity column annotated with ``XIC_AREA`` becomes
+      ``{prefix}intensity``
+    - the first intensity column annotated with ``NORMALIZED_XIC_AREA`` becomes
+      ``{prefix}normalized_intensity``
+    - if neither semantic is present, the dataset's primary intensity column
+      becomes ``{prefix}intensity``
+    - any remaining intensity columns keep their original name for unprefixed
+      rollups, or gain ``prefix`` for prefixed rollups
+
+    If an additional column would collide with an already-assigned output name,
+    it is dropped. This intentionally favors the canonical semantic/primary
+    names over preserving every conflicting auxiliary column.
+
+    Returns
+    -------
+    intensity_columns : dict[str, str]
+        Ordered mapping from source intensity column to rolled output column.
+    intensity_column : str
+        The primary output intensity column for the rolled dataset.
+    semantics : dict[str, Any]
+        Semantic annotations for rolled intensity columns only.
+    """
+
+    primary_column = getattr(dataset, "intensity_column", None)
+    dataset_intensity_columns = getattr(dataset, "intensity_columns", None)
+    if dataset_intensity_columns is None:
+        intensity_columns = (
+            [primary_column] if primary_column is not None else []
+        )
+    else:
+        intensity_columns = list(dataset_intensity_columns)
+        if (
+            primary_column is not None
+            and primary_column not in intensity_columns
+        ):
+            intensity_columns = [primary_column, *intensity_columns]
+
+    if not intensity_columns:
+        raise ValueError("Dataset must define at least one intensity column")
+
+    semantics = getattr(dataset, "semantics", {})
+    canonical_intensity_column = f"{prefix}intensity"
+    canonical_normalized_column = f"{prefix}normalized_intensity"
+
+    output_columns: dict[str, str] = {}
+    output_semantics: dict[str, _Any] = {}
+    used_outputs = set()
+    used_sources = set()
+
+    def _add_output(source_column: str, output_column: str) -> bool:
+        if source_column in used_sources or output_column in used_outputs:
+            return False
+
+        output_columns[source_column] = output_column
+        used_sources.add(source_column)
+        used_outputs.add(output_column)
+
+        if (semantic := semantics.get(source_column)) is not None:
+            output_semantics[output_column] = semantic
+
+        return True
+
+    raw_column = next(
+        (
+            column_name
+            for column_name in intensity_columns
+            if semantics.get(column_name) == _XIC_AREA
+        ),
+        None,
+    )
+    if raw_column is not None:
+        _add_output(raw_column, canonical_intensity_column)
+
+    normalized_column = next(
+        (
+            column_name
+            for column_name in intensity_columns
+            if semantics.get(column_name) == _NORMALIZED_XIC_AREA
+        ),
+        None,
+    )
+    if normalized_column is not None:
+        _add_output(normalized_column, canonical_normalized_column)
+
+    if (
+        raw_column is None
+        and normalized_column is None
+        and primary_column is not None
+    ):
+        _add_output(primary_column, canonical_intensity_column)
+    elif primary_column is not None and primary_column not in used_sources:
+        preserved_primary_column = (
+            f"{prefix}{primary_column}" if prefix else primary_column
+        )
+        _add_output(primary_column, preserved_primary_column)
+
+    for source_column in intensity_columns:
+        if source_column in used_sources:
+            continue
+        preserved_output_column = (
+            f"{prefix}{source_column}" if prefix else source_column
+        )
+        _add_output(source_column, preserved_output_column)
+
+    primary_output_column = (
+        canonical_intensity_column
+        if canonical_intensity_column in used_outputs
+        else (
+            canonical_normalized_column
+            if canonical_normalized_column in used_outputs
+            else next(iter(output_columns.values()))
+        )
+    )
+
+    return output_columns, primary_output_column, output_semantics
 
 
 def _filter_rollup_dataset(

@@ -10,6 +10,9 @@ from wheely.mammoth import PsmIntensityDataset
 from wheely.mammoth.proteins import ProteinIntensityDataset
 
 from ..rollup import directlfq as _roll_up_directlfq
+from ..rollup.utils import (
+    _resolve_rollup_output_intensity_columns,
+)
 
 
 def quantify_proteins_directlfq(
@@ -65,12 +68,21 @@ def quantify_proteins_directlfq(
     ):
         feature_key_columns.append(dset.charge_column)
 
+    (
+        output_intensity_columns,
+        intensity_column,
+        intensity_semantics,
+    ) = _resolve_rollup_output_intensity_columns(
+        dset,
+        prefix="directlfq_",
+    )
+
     rolled = _roll_up_directlfq(
         dset,
         entity_key_columns=[dset.protein_column],
         sample_column=dset.sample_column,
         feature_key_columns=feature_key_columns,
-        intensity_columns={dset.intensity_column: "directlfq_intensity"},
+        intensity_columns=output_intensity_columns,
         preserved_column_reductions={dset.target_column: "max"},
         qvalue_threshold=qvalue_threshold,
         filter_column=filter_column,
@@ -79,9 +91,22 @@ def quantify_proteins_directlfq(
     return ProteinIntensityDataset(
         rolled,
         sample_column=dset.sample_column,
-        intensity_column="directlfq_intensity",
+        intensity_column=intensity_column,
+        intensity_columns=list(output_intensity_columns.values()),
         protein_column=dset.protein_column,
         protein_delim=dset.protein_delim,
         target_column=dset.target_column,
         score_columns=[],
+        semantics={
+            **{
+                column_name: dset.semantics[column_name]
+                for column_name in (
+                    dset.sample_column,
+                    dset.protein_column,
+                    dset.target_column,
+                )
+                if column_name in dset.semantics
+            },
+            **intensity_semantics,
+        },
     )

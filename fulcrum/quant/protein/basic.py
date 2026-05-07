@@ -19,6 +19,9 @@ from wheely.mammoth.proteins import (
 )
 
 from ..rollup import basic as _roll_up_basic
+from ..rollup.utils import (
+    _resolve_rollup_output_intensity_columns,
+)
 
 
 def quantify_proteins_basic(
@@ -72,12 +75,18 @@ def quantify_proteins_basic(
     if reduction is None:
         reduction = "sum"
 
+    (
+        output_intensity_columns,
+        intensity_column,
+        intensity_semantics,
+    ) = _resolve_rollup_output_intensity_columns(dset)
+
     rolled = _roll_up_basic(
         dset,
         entity_key_columns=[dset.protein_column],
         sample_column=dset.sample_column,
         feature_key_columns=None,
-        intensity_columns={dset.intensity_column: "intensity"},
+        intensity_columns=output_intensity_columns,
         intensity_reduction=reduction,
         preserved_column_reductions={dset.target_column: "max"},
         qvalue_threshold=qvalue_threshold,
@@ -87,9 +96,22 @@ def quantify_proteins_basic(
     return ProteinIntensityDataset(
         rolled,
         sample_column=dset.sample_column,
-        intensity_column="intensity",
+        intensity_column=intensity_column,
+        intensity_columns=list(output_intensity_columns.values()),
         protein_column=dset.protein_column,
         protein_delim=dset.protein_delim,
         target_column=dset.target_column,
         score_columns=[],
+        semantics={
+            **{
+                column_name: dset.semantics[column_name]
+                for column_name in (
+                    dset.sample_column,
+                    dset.protein_column,
+                    dset.target_column,
+                )
+                if column_name in dset.semantics
+            },
+            **intensity_semantics,
+        },
     )
