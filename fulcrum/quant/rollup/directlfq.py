@@ -28,8 +28,8 @@ from .utils import (
     _aggregate_reduced_columns,
     _filter_rollup_dataset,
     _join_aggregates,
-    _normalize_group_key_columns,
     _normalize_intensity_column_map,
+    _normalize_rollup_axes,
 )
 
 
@@ -57,13 +57,15 @@ def _build_directlfq_schema(
     return _StructType(fields)
 
 
-def _make_quant_id(
+def _make_feature_id(
     pdf: _pd.DataFrame,
-    quant_key_columns: _Sequence[str],
+    feature_key_columns: _Sequence[str],
 ) -> _pd.Series:
-    columns = list(quant_key_columns)
+    columns = list(feature_key_columns)
     if not columns:
-        raise ValueError("quant_key_columns must contain at least one column")
+        raise ValueError(
+            "feature_key_columns must contain at least one column"
+        )
 
     if len(columns) == 1:
         return pdf[columns[0]].astype(str)
@@ -79,15 +81,15 @@ def _make_quant_id(
 def _estimate_directlfq_partition(
     pdf: _pd.DataFrame,
     *,
-    partition_key_columns: _Sequence[str],
+    entity_key_columns: _Sequence[str],
     sample_column: str,
-    quant_key_columns: _Sequence[str],
+    feature_key_columns: _Sequence[str],
     intensity_column: str,
     intensity_output_column: str,
     directlfq_log_level: int,
 ) -> _pd.DataFrame:
     result_columns = [
-        *partition_key_columns,
+        *entity_key_columns,
         sample_column,
         intensity_output_column,
     ]
@@ -95,11 +97,11 @@ def _estimate_directlfq_partition(
     if pdf.empty:
         return _pd.DataFrame(columns=result_columns)
 
-    quant_id = _make_quant_id(pdf, quant_key_columns)
-    pdf = pdf.assign(__entity_id="entity", __quant_id=quant_id)
+    feature_id = _make_feature_id(pdf, feature_key_columns)
+    pdf = pdf.assign(__entity_id="entity", __feature_id=feature_id)
 
     wide = pdf.pivot_table(
-        index=["__entity_id", "__quant_id"],
+        index=["__entity_id", "__feature_id"],
         columns=sample_column,
         values=intensity_column,
         aggfunc="first",
@@ -117,7 +119,7 @@ def _estimate_directlfq_partition(
             "Negative intensity values found for %s",
             {
                 column_name: pdf[column_name].iloc[0]
-                for column_name in partition_key_columns
+                for column_name in entity_key_columns
             },
         )
         wide[wide_is_neg] = _np.nan
@@ -170,7 +172,7 @@ def _estimate_directlfq_partition(
         .drop(columns="__entity_id")
     )
 
-    for column_name in partition_key_columns:
+    for column_name in entity_key_columns:
         protein_long[column_name] = pdf[column_name].iloc[0]
 
     return protein_long[result_columns]
@@ -179,58 +181,108 @@ def _estimate_directlfq_partition(
 def roll_up_directlfq(
     dataset: _Any,
     *,
-    partition_key_columns: _Sequence[str],
+    entity_key_columns: _Sequence[str],
     sample_column: str,
-    quant_key_columns: _Sequence[str],
+    feature_key_columns: _Sequence[str] | None = None,
     intensity_columns: _Mapping[str, str] | _Sequence[str] | str | None = None,
     preserved_column_reductions: _Mapping[str, _ReductionLike] | None = None,
     qvalue_threshold: float | None = None,
     filter_column: str | _Column | None = None,
 ) -> _DataFrame:
+    """
+    Roll up one or more intensity tracks to a final output grain using the
+    DirectLFQ estimator within each final entity.
+
+    This helper returns one row per ``(entity_key_columns, sample_column)``
+    combination after any requested filtering is applied. ``feature_key_columns``
+    define the lower-level feature identity that should be treated as the same
+    measurable feature across samples within each final entity. DirectLFQ uses
+    those feature keys to build the per-entity wide matrix passed to the
+    estimator, with ``sample_column`` defining the sample axis and
+    ``feature_key_columns`` defining the row identity.
+
+    To support multi-track rollups, ``intensity_columns`` may be either a
+    single source column, a sequence of source columns, or a mapping from
+    source column name to output column name. Each requested track is estimated
+    independently for the same final output grain and emitted as a separate
+    column in the returned :py:class:`pyspark.sql.DataFrame`.
+
+    Parameters
+    ----------
+    dataset
+        Input dataset containing the source intensities and all grouping
+        columns. If ``qvalue_threshold`` is specified, this must be a
+        :py:class:`ConfidenceDataset`.
+    entity_key_columns
+        Columns identifying the final rollup entity, excluding the sample axis.
+        The returned frame will contain one row per
+        ``(entity_key_columns, sample_column)`` pair.
+    sample_column
+        Column identifying sample membership in the input dataset and output
+        frame. This column must not also appear in ``entity_key_columns`` or
+        ``feature_key_columns``.
+    feature_key_columns
+        Columns identifying the same lower-level feature across samples within
+        each final entity. These keys are combined into the DirectLFQ feature
+        ID used internally to pivot each entity partition to wide form. This
+        parameter is required for the DirectLFQ backend.
+    intensity_columns
+        Source intensity column or columns to estimate. When a mapping is
+        provided, keys are source column names and values are output column
+        names. If omitted, ``dataset.intensity_column`` is used and the source
+        column name is preserved.
+    preserved_column_reductions
+        Optional mapping of non-key input columns to reduction names or
+        callables. Each preserved column is reduced at the same
+        ``(entity_key_columns, sample_column)`` grain and included in the
+        returned frame.
+    qvalue_threshold
+        Optional confidence threshold applied before rollup. When provided,
+        only rows with ``dataset.qvalues <= qvalue_threshold`` are retained.
+    filter_column
+        Optional additional Spark filter applied before rollup. May be either a
+        column name or a Spark boolean expression.
+
+    Returns
+    -------
+    DataFrame
+        A Spark DataFrame containing one row per
+        ``(entity_key_columns, sample_column)`` pair, with one estimated output
+        column per requested intensity track and any requested preserved
+        columns.
+    """
     filtered = _filter_rollup_dataset(
         dataset,
         qvalue_threshold=qvalue_threshold,
         filter_column=filter_column,
     )
-    partition_keys = _normalize_group_key_columns(
-        partition_key_columns,
-        label="partition_key_columns",
-    )
-    if sample_column in partition_keys:
-        raise ValueError(
-            "sample_column must not also be present in partition_key_columns"
-        )
-
-    if sample_column not in filtered.data.columns:
-        raise ValueError(
-            f"Dataset does not contain sample column {sample_column!r}"
-        )
-
-    quant_keys = _normalize_group_key_columns(
-        quant_key_columns,
-        label="quant_key_columns",
+    entity_keys, feature_keys, output_group_keys = _normalize_rollup_axes(
+        filtered,
+        entity_key_columns=entity_key_columns,
+        sample_column=sample_column,
+        feature_key_columns=feature_key_columns,
+        require_feature_keys=True,
     )
     intensity_column_map = _normalize_intensity_column_map(
         filtered,
         intensity_columns,
     )
-    final_group_keys = [*partition_keys, sample_column]
     directlfq_log_level = _logging.getLogger("directlfq").getEffectiveLevel()
 
     intensity_frames = []
     for source_column, output_column in intensity_column_map:
         schema = _build_directlfq_schema(
             filtered,
-            final_group_key_columns=final_group_keys,
+            final_group_key_columns=output_group_keys,
             intensity_output_column=output_column,
         )
         intensity_frames.append(
-            filtered.data.groupBy(*partition_keys).applyInPandas(
+            filtered.data.groupBy(*entity_keys).applyInPandas(
                 lambda pdf: _estimate_directlfq_partition(
                     pdf,
-                    partition_key_columns=partition_keys,
+                    entity_key_columns=entity_keys,
                     sample_column=sample_column,
-                    quant_key_columns=quant_keys,
+                    feature_key_columns=feature_keys,
                     intensity_column=source_column,
                     intensity_output_column=output_column,
                     directlfq_log_level=directlfq_log_level,
@@ -243,18 +295,18 @@ def roll_up_directlfq(
     for frame in intensity_frames[1:]:
         intensities = intensities.join(
             frame,
-            on=final_group_keys,
+            on=output_group_keys,
             how="outer",
         )
 
     preserved = _aggregate_reduced_columns(
         filtered,
-        group_key_columns=final_group_keys,
+        group_key_columns=output_group_keys,
         column_reductions=preserved_column_reductions,
     )
 
     return _join_aggregates(
         intensities,
         preserved,
-        join_columns=final_group_keys,
+        join_columns=output_group_keys,
     )

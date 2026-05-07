@@ -52,6 +52,63 @@ def _normalize_group_key_columns(
     return columns
 
 
+def _normalize_rollup_axes(
+    dataset: _Any,
+    *,
+    entity_key_columns: _Sequence[str],
+    sample_column: str,
+    feature_key_columns: _Sequence[str] | None = None,
+    require_feature_keys: bool = True,
+) -> tuple[list[str], list[str], list[str]]:
+    entity_keys = _normalize_group_key_columns(
+        entity_key_columns,
+        label="entity_key_columns",
+    )
+    raw_feature_keys = (
+        [] if feature_key_columns is None else list(feature_key_columns)
+    )
+    if raw_feature_keys:
+        feature_keys = _normalize_group_key_columns(
+            raw_feature_keys,
+            label="feature_key_columns",
+        )
+    elif require_feature_keys:
+        raise ValueError(
+            "feature_key_columns must contain at least one column"
+        )
+    else:
+        feature_keys = []
+
+    if sample_column in entity_keys:
+        raise ValueError(
+            "sample_column must not also be present in entity_key_columns"
+        )
+    if sample_column in feature_keys:
+        raise ValueError(
+            "sample_column must not also be present in feature_key_columns"
+        )
+
+    data_columns = set(dataset.data.columns)
+    if sample_column not in data_columns:
+        raise ValueError(
+            f"Dataset does not contain sample column {sample_column!r}"
+        )
+
+    required_columns = [*entity_keys, *feature_keys]
+    missing_columns = [
+        column_name
+        for column_name in required_columns
+        if column_name not in data_columns
+    ]
+    if missing_columns:
+        raise ValueError(
+            "Dataset is missing required rollup columns: "
+            + ", ".join(repr(column_name) for column_name in missing_columns)
+        )
+
+    return entity_keys, feature_keys, [*entity_keys, sample_column]
+
+
 def _normalize_intensity_column_map(
     dataset: _Any,
     intensity_columns: _Mapping[str, str] | _Sequence[str] | str | None = None,

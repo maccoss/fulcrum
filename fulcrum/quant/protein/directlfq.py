@@ -58,18 +58,18 @@ def quantify_proteins_directlfq(
     Returns
     -------
     """
-    quant_key_columns = [dset.peptide_column]
+    feature_key_columns = [dset.peptide_column]
     if (
         not rollup_peptides
         and getattr(dset, "charge_column", None) is not None
     ):
-        quant_key_columns.append(dset.charge_column)
+        feature_key_columns.append(dset.charge_column)
 
     rolled = _roll_up_directlfq(
         dset,
-        partition_key_columns=[dset.protein_column],
+        entity_key_columns=[dset.protein_column],
         sample_column=dset.sample_column,
-        quant_key_columns=quant_key_columns,
+        feature_key_columns=feature_key_columns,
         intensity_columns={dset.intensity_column: "directlfq_intensity"},
         preserved_column_reductions={dset.target_column: "max"},
         qvalue_threshold=qvalue_threshold,

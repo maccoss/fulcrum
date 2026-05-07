@@ -74,7 +74,9 @@ def quantify_proteins_basic(
 
     rolled = _roll_up_basic(
         dset,
-        group_key_columns=[dset.protein_column, dset.sample_column],
+        entity_key_columns=[dset.protein_column],
+        sample_column=dset.sample_column,
+        feature_key_columns=None,
         intensity_columns={dset.intensity_column: "intensity"},
         intensity_reduction=reduction,
         preserved_column_reductions={dset.target_column: "max"},
