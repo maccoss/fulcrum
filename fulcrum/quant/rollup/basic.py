@@ -16,9 +16,8 @@ from pyspark.sql import (
 
 from .utils import (
     _ReductionLike,
-    _aggregate_reduced_columns,
+    _build_reduced_aggregation_columns,
     _filter_rollup_dataset,
-    _join_aggregates,
     _normalize_intensity_column_map,
     _normalize_rollup_axes,
     _resolve_reduction,
@@ -126,18 +125,12 @@ def roll_up_basic(
         reduction_fn(_fns.col(source_column)).alias(output_column)
         for source_column, output_column in intensity_column_map
     ]
-
-    intensities = filtered.data.groupBy(*output_group_keys).agg(
-        *intensity_aggregations
-    )
-    preserved = _aggregate_reduced_columns(
+    preserved_aggregations = _build_reduced_aggregation_columns(
         filtered,
         group_key_columns=output_group_keys,
         column_reductions=preserved_column_reductions,
     )
-
-    return _join_aggregates(
-        intensities,
-        preserved,
-        join_columns=output_group_keys,
+    return filtered.data.groupBy(*output_group_keys).agg(
+        *intensity_aggregations,
+        *preserved_aggregations,
     )

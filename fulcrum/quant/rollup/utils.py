@@ -178,8 +178,25 @@ def _aggregate_reduced_columns(
     group_key_columns: _Sequence[str],
     column_reductions: _Mapping[str, _ReductionLike] | None = None,
 ) -> _DataFrame | None:
-    if not column_reductions:
+    aggregation_columns = _build_reduced_aggregation_columns(
+        dataset,
+        group_key_columns=group_key_columns,
+        column_reductions=column_reductions,
+    )
+    if not aggregation_columns:
         return None
+
+    return dataset.data.groupBy(*group_key_columns).agg(*aggregation_columns)
+
+
+def _build_reduced_aggregation_columns(
+    dataset: _Any,
+    *,
+    group_key_columns: _Sequence[str],
+    column_reductions: _Mapping[str, _ReductionLike] | None = None,
+) -> list[_Column]:
+    if not column_reductions:
+        return []
 
     data_columns = set(dataset.data.columns)
     aggregation_columns = []
@@ -198,7 +215,7 @@ def _aggregate_reduced_columns(
             )
         )
 
-    return dataset.data.groupBy(*group_key_columns).agg(*aggregation_columns)
+    return aggregation_columns
 
 
 def _join_aggregates(

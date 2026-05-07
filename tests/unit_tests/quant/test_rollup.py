@@ -105,6 +105,9 @@ def test_roll_up_basic_supports_multiple_tracks_and_preserved_reductions(
     assert rows[("s2", "pepC")]["peptide_normalized"] == pytest.approx(0.8)
     assert rows[("s2", "pepC")]["qvalue"] == pytest.approx(0.04)
 
+    optimized_plan = rolled._jdf.queryExecution().optimizedPlan().toString()
+    assert "Join" not in optimized_plan
+
 
 def test_quantify_proteins_basic_keeps_legacy_surface(
     intensity_confidence_dataset,
