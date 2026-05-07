@@ -171,6 +171,28 @@ def test_roll_up_directlfq_supports_multiple_tracks_and_preserved_reductions(
     assert rows[("s2", "P1")]["protein_normalized"] > 0
 
 
+def test_roll_up_directlfq_avoids_track_join_without_preserved_columns(
+    intensity_confidence_dataset,
+):
+    pytest.importorskip("directlfq")
+
+    rolled = roll_up_directlfq(
+        intensity_confidence_dataset,
+        entity_key_columns=["protein_group"],
+        sample_column="sample",
+        feature_key_columns=["peptide", "charge"],
+        intensity_columns={
+            "raw_intensity": "protein_raw",
+            "normalized_intensity": "protein_normalized",
+        },
+        preserved_column_reductions=None,
+        qvalue_threshold=0.05,
+    )
+
+    optimized_plan = rolled._jdf.queryExecution().optimizedPlan().toString()
+    assert "Join" not in optimized_plan
+
+
 @pytest.mark.parametrize("feature_key_columns", [None, []])
 def test_roll_up_directlfq_requires_feature_keys(
     intensity_confidence_dataset,

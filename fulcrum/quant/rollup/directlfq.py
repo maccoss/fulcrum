@@ -37,7 +37,7 @@ def _build_directlfq_schema(
     dataset: _Any,
     *,
     final_group_key_columns: _Sequence[str],
-    intensity_output_column: str,
+    intensity_output_columns: _Sequence[str],
 ) -> _StructType:
     fields = [
         _StructField(
@@ -47,12 +47,13 @@ def _build_directlfq_schema(
         )
         for column_name in final_group_key_columns
     ]
-    fields.append(
+    fields.extend(
         _StructField(
-            intensity_output_column,
+            output_column,
             _DoubleType(),
             nullable=True,
         )
+        for output_column in intensity_output_columns
     )
     return _StructType(fields)
 
@@ -78,27 +79,19 @@ def _make_feature_id(
     )
 
 
-def _estimate_directlfq_partition(
+def _estimate_directlfq_track(
     pdf: _pd.DataFrame,
     *,
-    entity_key_columns: _Sequence[str],
     sample_column: str,
-    feature_key_columns: _Sequence[str],
     intensity_column: str,
     intensity_output_column: str,
     directlfq_log_level: int,
+    entity_label: dict[str, _Any],
 ) -> _pd.DataFrame:
-    result_columns = [
-        *entity_key_columns,
-        sample_column,
-        intensity_output_column,
-    ]
+    result_columns = [sample_column, intensity_output_column]
 
     if pdf.empty:
         return _pd.DataFrame(columns=result_columns)
-
-    feature_id = _make_feature_id(pdf, feature_key_columns)
-    pdf = pdf.assign(__entity_id="entity", __feature_id=feature_id)
 
     wide = pdf.pivot_table(
         index=["__entity_id", "__feature_id"],
@@ -117,10 +110,7 @@ def _estimate_directlfq_partition(
     if (wide_is_neg).any().any():
         _logger.warning(
             "Negative intensity values found for %s",
-            {
-                column_name: pdf[column_name].iloc[0]
-                for column_name in entity_key_columns
-            },
+            entity_label,
         )
         wide[wide_is_neg] = _np.nan
 
@@ -172,10 +162,67 @@ def _estimate_directlfq_partition(
         .drop(columns="__entity_id")
     )
 
-    for column_name in entity_key_columns:
-        protein_long[column_name] = pdf[column_name].iloc[0]
-
     return protein_long[result_columns]
+
+
+def _estimate_directlfq_partition(
+    pdf: _pd.DataFrame,
+    *,
+    entity_key_columns: _Sequence[str],
+    sample_column: str,
+    feature_key_columns: _Sequence[str],
+    intensity_column_map: _Sequence[tuple[str, str]],
+    directlfq_log_level: int,
+) -> _pd.DataFrame:
+    output_columns = [
+        output_column for _, output_column in intensity_column_map
+    ]
+    result_columns = [*entity_key_columns, sample_column, *output_columns]
+
+    if pdf.empty:
+        return _pd.DataFrame(columns=result_columns)
+
+    entity_label = {
+        column_name: pdf[column_name].iloc[0]
+        for column_name in entity_key_columns
+    }
+    prepared_pdf = pdf.assign(
+        __entity_id="entity",
+        __feature_id=_make_feature_id(pdf, feature_key_columns),
+    )
+
+    track_series = []
+    for source_column, output_column in intensity_column_map:
+        track_result = _estimate_directlfq_track(
+            prepared_pdf,
+            sample_column=sample_column,
+            intensity_column=source_column,
+            intensity_output_column=output_column,
+            directlfq_log_level=directlfq_log_level,
+            entity_label=entity_label,
+        )
+        if track_result.empty:
+            continue
+        track_series.append(
+            track_result.set_index(sample_column)[output_column].rename(
+                output_column
+            )
+        )
+
+    if not track_series:
+        return _pd.DataFrame(columns=result_columns)
+
+    merged_tracks = _pd.concat(
+        track_series, axis=1, join="outer"
+    ).reset_index()
+    for output_column in output_columns:
+        if output_column not in merged_tracks.columns:
+            merged_tracks[output_column] = _np.nan
+
+    for column_name, value in entity_label.items():
+        merged_tracks[column_name] = value
+
+    return merged_tracks[result_columns]
 
 
 def roll_up_directlfq(
@@ -269,35 +316,24 @@ def roll_up_directlfq(
     )
     directlfq_log_level = _logging.getLogger("directlfq").getEffectiveLevel()
 
-    intensity_frames = []
-    for source_column, output_column in intensity_column_map:
-        schema = _build_directlfq_schema(
-            filtered,
-            final_group_key_columns=output_group_keys,
-            intensity_output_column=output_column,
-        )
-        intensity_frames.append(
-            filtered.data.groupBy(*entity_keys).applyInPandas(
-                lambda pdf: _estimate_directlfq_partition(
-                    pdf,
-                    entity_key_columns=entity_keys,
-                    sample_column=sample_column,
-                    feature_key_columns=feature_keys,
-                    intensity_column=source_column,
-                    intensity_output_column=output_column,
-                    directlfq_log_level=directlfq_log_level,
-                ),
-                schema,
-            )
-        )
-
-    intensities = intensity_frames[0]
-    for frame in intensity_frames[1:]:
-        intensities = intensities.join(
-            frame,
-            on=output_group_keys,
-            how="outer",
-        )
+    schema = _build_directlfq_schema(
+        filtered,
+        final_group_key_columns=output_group_keys,
+        intensity_output_columns=[
+            output_column for _, output_column in intensity_column_map
+        ],
+    )
+    intensities = filtered.data.groupBy(*entity_keys).applyInPandas(
+        lambda pdf: _estimate_directlfq_partition(
+            pdf,
+            entity_key_columns=entity_keys,
+            sample_column=sample_column,
+            feature_key_columns=feature_keys,
+            intensity_column_map=intensity_column_map,
+            directlfq_log_level=directlfq_log_level,
+        ),
+        schema,
+    )
 
     preserved = _aggregate_reduced_columns(
         filtered,
