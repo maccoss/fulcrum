@@ -9,18 +9,16 @@ from typing import (
     Union as _Union,
 )
 
-from pyspark.sql import (
-    functions as _fns,
-    Column as _Column,
-)
+from pyspark.sql import Column as _Column
 
 from wheely.mammoth import (
     PsmIntensityDataset,
-    ConfidenceDataset,
 )
 from wheely.mammoth.proteins import (
     ProteinIntensityDataset,
 )
+
+from ..rollup import basic as _roll_up_basic
 
 
 def quantify_proteins_basic(
@@ -74,31 +72,18 @@ def quantify_proteins_basic(
     if reduction is None:
         reduction = "sum"
 
-    # TODO: reduction registry
-    if not callable(reduction):
-        reduction = {
-            "sum": _fns.sum,
-            "max": _fns.max,
-        }[reduction]
-
-    if qvalue_threshold is not None:
-        assert isinstance(
-            dset, ConfidenceDataset
-        ), "dset must be a ConfidenceDataset if qvalue_threshold is specified"
-        dset = dset.with_data(
-            dset.data.filter(dset.qvalues <= qvalue_threshold),
-        )
-
-    if filter_column is not None:
-        dset = dset.with_data(
-            dset.data.filter(filter_column),
-        )
+    rolled = _roll_up_basic(
+        dset,
+        group_key_columns=[dset.protein_column, dset.sample_column],
+        intensity_columns={dset.intensity_column: "intensity"},
+        intensity_reduction=reduction,
+        preserved_column_reductions={dset.target_column: "max"},
+        qvalue_threshold=qvalue_threshold,
+        filter_column=filter_column,
+    )
 
     return ProteinIntensityDataset(
-        dset.data.groupBy(dset.proteins, dset.samples).agg(
-            _fns.max(dset.targets).alias(dset.target_column),
-            reduction(dset.intensities).alias("intensity"),
-        ),
+        rolled,
         sample_column=dset.sample_column,
         intensity_column="intensity",
         protein_column=dset.protein_column,
