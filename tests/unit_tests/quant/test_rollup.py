@@ -4,6 +4,10 @@ import pytest
 from pyspark.sql import SparkSession
 
 from wheely.mammoth.dataset import PsmIntensityConfidenceDataset
+from wheely.mammoth.proteins import (
+    ProteinConfidenceDataset,
+    ProteinIntensityDataset,
+)
 from wheely.mammoth.semantics import (
     NORMALIZED_XIC_AREA,
     XIC_AREA,
@@ -11,6 +15,7 @@ from wheely.mammoth.semantics import (
 
 from fulcrum.quant.protein.basic import quantify_proteins_basic
 from fulcrum.quant.protein.directlfq import quantify_proteins_directlfq
+from fulcrum.quant.protein.util import merge_protein_confidence_and_quant
 from fulcrum.quant.rollup import (
     roll_up_basic,
     roll_up_directlfq,
@@ -345,6 +350,74 @@ def test_quantify_proteins_directlfq_uses_semantic_names_when_available(
         rolled.get_by_semantics(NORMALIZED_XIC_AREA)
         == "directlfq_normalized_intensity"
     )
+
+
+def test_merge_protein_confidence_and_quant_preserves_multiple_intensity_tracks(
+    spark_session,
+):
+    prot_conf = ProteinConfidenceDataset(
+        spark_session.createDataFrame(
+            [
+                ("P1", True, 0.01, 0.001),
+            ],
+            schema=["protein_group", "target", "qvalue", "errprob"],
+        ),
+        protein_column="protein_group",
+        target_column="target",
+        score_columns=[],
+        qvalue_column="qvalue",
+        errprob_column="errprob",
+        protein_delim=";",
+    )
+
+    prot_quant = ProteinIntensityDataset(
+        spark_session.createDataFrame(
+            [
+                ("P1", True, "s1", 100.0, 10.0),
+                ("P1", True, "s2", 200.0, 20.0),
+            ],
+            schema=[
+                "protein_group",
+                "target",
+                "sample",
+                "intensity",
+                "normalized_intensity",
+            ],
+        ),
+        sample_column="sample",
+        intensity_column="intensity",
+        intensity_columns=["intensity", "normalized_intensity"],
+        protein_column="protein_group",
+        target_column="target",
+        score_columns=[],
+        protein_delim=";",
+        semantics={
+            "intensity": XIC_AREA,
+            "normalized_intensity": NORMALIZED_XIC_AREA,
+        },
+    )
+
+    merged = merge_protein_confidence_and_quant(prot_conf, prot_quant)
+
+    assert merged.intensity_column == "intensity"
+    assert merged.intensity_columns == ["intensity", "normalized_intensity"]
+    assert merged.get_by_semantics(XIC_AREA) == "intensity"
+    assert (
+        merged.get_by_semantics(NORMALIZED_XIC_AREA) == "normalized_intensity"
+    )
+
+    rows = {
+        row["sample"]: row.asDict()
+        for row in merged.data.select(
+            "sample",
+            "intensity",
+            "normalized_intensity",
+        ).collect()
+    }
+    assert rows["s1"]["intensity"] == pytest.approx(100.0)
+    assert rows["s1"]["normalized_intensity"] == pytest.approx(10.0)
+    assert rows["s2"]["intensity"] == pytest.approx(200.0)
+    assert rows["s2"]["normalized_intensity"] == pytest.approx(20.0)
 
 
 @pytest.mark.parametrize("feature_key_columns", [None, []])
