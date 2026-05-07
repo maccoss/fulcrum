@@ -103,9 +103,10 @@ def write_combined(
     - ``Precursor.Quantity`` -- Raw PSM intensity (Note: for some quant backends this may be normalized PSM intensity,
                                 in which case a log message may include more information about its content)
     - ``Precursor.Normalised`` -- Normalized PSM intensity
-    - ``PG.Quantity`` -- rolled-up protein group quantity
+    - ``PG.Quantity`` -- rolled-up raw protein group quantity
+    - ``PG.Normalised`` -- rolled-up normalized protein group quantity
     - ``*`` -- additional columns give PSM-level identification scores
-    - ``PG.*`` -- additional columns with the ``PG`` prefix give protein group-level identification scores
+    - ``PG.*`` -- additional columns with the ``PG`` prefix give protein group-level intensity or score columns
 
     **Note:** Some of these columns will only be included if they are computed by the workflow and selected backends.
     For example, in common usage only one of ``Global.Precursor.Q.Value`` and ``Global.Peptide.Q.Value`` will be
@@ -510,16 +511,43 @@ def write_combined(
                         addl_inten_semantic,
                     )
 
-    # PG.Quantity: from protein dataset intensity column if available
-    # TODO: use semantics to resolve multiple roll-up quantities
-    prot_intensity_col = getattr(proteins, "intensity_column", "prot")
-    if prot_intensity_col is not None:
-        output_cols["PG.Quantity"] = _fns.col(prot_intensity_col)
-        input_cols.add(prot_intensity_col)
-    else:
-        raise ValueError(
-            "proteins dataset must have an intensity column for combined output"
-        )
+    # PG quantity logic mirrors the peptide-side handling, but only exposes the
+    # canonical raw/normalized report columns.
+    pg_intensity_col = _get_column_by_semantic(proteins, XIC_AREA, "prot")
+    if pg_intensity_col is not None:
+        output_cols["PG.Quantity"] = _fns.col(pg_intensity_col)
+        input_cols.add(pg_intensity_col)
+
+    pg_norm_intensity_col = _get_column_by_semantic(
+        proteins, NORMALIZED_XIC_AREA, "prot"
+    )
+    if pg_norm_intensity_col is not None:
+        output_cols["PG.Normalised"] = _fns.col(pg_norm_intensity_col)
+        input_cols.add(pg_norm_intensity_col)
+
+    if pg_intensity_col is None and pg_norm_intensity_col is None:
+        prot_intensity_col = getattr(proteins, "intensity_column", None)
+        if prot_intensity_col is not None:
+            prot_intensity_col = f"prot.{prot_intensity_col}"
+            output_cols["PG.Quantity"] = _fns.col(prot_intensity_col)
+            input_cols.add(prot_intensity_col)
+        else:
+            raise ValueError(
+                "proteins dataset must have an intensity column for combined output"
+            )
+
+    for intensity_col in getattr(proteins, "intensity_columns", []):
+        intensity_input_col = f"prot.{intensity_col}"
+        if intensity_input_col not in input_cols:
+            output_col = f"PG.{intensity_col}"
+            if output_col not in output_cols.keys():
+                output_cols[output_col] = _fns.col(intensity_input_col)
+                input_cols.add(intensity_input_col)
+            else:
+                _logger.warning(
+                    "protein intensity column %s already exists in output; it will be dropped!",
+                    intensity_input_col,
+                )
 
     # Add score columns if not already included
     for score_col in peptides.score_columns:
