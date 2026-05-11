@@ -154,7 +154,7 @@ def _normalize_intensity_column_map(
     return normalized
 
 
-def _resolve_rollup_output_intensity_columns(
+def resolve_rollup_output_intensity_columns(
     dataset: _Any,
     *,
     prefix: str = "",

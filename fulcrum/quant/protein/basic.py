@@ -20,7 +20,7 @@ from wheely.mammoth.proteins import (
 
 from ..rollup import basic as _roll_up_basic
 from ..rollup.utils import (
-    _resolve_rollup_output_intensity_columns,
+    resolve_rollup_output_intensity_columns,
 )
 
 
@@ -53,6 +53,16 @@ def quantify_proteins_basic(
 
     or invoke :py:func:`fulcrum.fulcrum` with equivalent parameters.
 
+    Note: when multiple intensity columns are present in the input dataset (for example, raw and normalized intensities)
+    they will all be rolled up to separate protein-level intensity columns. This can result in a protein-level
+    "normalized intensity" column which is calculated by rolling up normalized intensities, rather than applying a
+    separate normalization step to rolled-up intensities, as shown below::
+
+        raw precursor intensity -> rollup -> protein-level intensity
+        |
+        v
+        normalized precursor intensity -> rollup -> protein-level normalized intensity
+
     Parameters
     ----------
     dset : PsmIntensityDataset
@@ -79,7 +89,7 @@ def quantify_proteins_basic(
         output_intensity_columns,
         intensity_column,
         intensity_semantics,
-    ) = _resolve_rollup_output_intensity_columns(dset)
+    ) = resolve_rollup_output_intensity_columns(dset)
 
     rolled = _roll_up_basic(
         dset,

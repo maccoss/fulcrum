@@ -11,7 +11,7 @@ from wheely.mammoth.proteins import ProteinIntensityDataset
 
 from ..rollup import directlfq as _roll_up_directlfq
 from ..rollup.utils import (
-    _resolve_rollup_output_intensity_columns,
+    resolve_rollup_output_intensity_columns,
 )
 
 
@@ -37,6 +37,16 @@ def quantify_proteins_directlfq(
         qvalue_threshold = 0.01
 
     or invoke :py:func:`fulcrum.fulcrum` with equivalent parameters.
+
+    Note: when multiple intensity columns are present in the input dataset (for example, raw and normalized intensities)
+    they will all be rolled up to separate protein-level intensity columns. This can result in a protein-level
+    "normalized intensity" column which is calculated by rolling up normalized intensities, rather than applying a
+    separate normalization step to rolled-up intensities, as shown below::
+
+        raw precursor intensity -> DirectLFQ -> protein-level intensity
+        |
+        v
+        normalized precursor intensity -> DirectLFQ -> protein-level normalized intensity
 
     Parameters
     ----------
@@ -72,7 +82,7 @@ def quantify_proteins_directlfq(
         output_intensity_columns,
         intensity_column,
         intensity_semantics,
-    ) = _resolve_rollup_output_intensity_columns(
+    ) = resolve_rollup_output_intensity_columns(
         dset,
         prefix="directlfq_",
     )
