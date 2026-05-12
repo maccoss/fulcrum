@@ -9,17 +9,18 @@ from typing import (
     Union as _Union,
 )
 
-from pyspark.sql import (
-    functions as _fns,
-    Column as _Column,
-)
+from pyspark.sql import Column as _Column
 
 from wheely.mammoth import (
     PsmIntensityDataset,
-    ConfidenceDataset,
 )
 from wheely.mammoth.proteins import (
     ProteinIntensityDataset,
+)
+
+from ..rollup import basic as _roll_up_basic
+from ..rollup.utils import (
+    resolve_rollup_output_intensity_columns,
 )
 
 
@@ -52,6 +53,16 @@ def quantify_proteins_basic(
 
     or invoke :py:func:`fulcrum.fulcrum` with equivalent parameters.
 
+    Note: when multiple intensity columns are present in the input dataset (for example, raw and normalized intensities)
+    they will all be rolled up to separate protein-level intensity columns. This can result in a protein-level
+    "normalized intensity" column which is calculated by rolling up normalized intensities, rather than applying a
+    separate normalization step to rolled-up intensities, as shown below::
+
+        raw precursor intensity -> rollup -> protein-level intensity
+        |
+        v
+        normalized precursor intensity -> rollup -> protein-level normalized intensity
+
     Parameters
     ----------
     dset : PsmIntensityDataset
@@ -74,35 +85,43 @@ def quantify_proteins_basic(
     if reduction is None:
         reduction = "sum"
 
-    # TODO: reduction registry
-    if not callable(reduction):
-        reduction = {
-            "sum": _fns.sum,
-            "max": _fns.max,
-        }[reduction]
+    (
+        output_intensity_columns,
+        intensity_column,
+        intensity_semantics,
+    ) = resolve_rollup_output_intensity_columns(dset)
 
-    if qvalue_threshold is not None:
-        assert isinstance(
-            dset, ConfidenceDataset
-        ), "dset must be a ConfidenceDataset if qvalue_threshold is specified"
-        dset = dset.with_data(
-            dset.data.filter(dset.qvalues <= qvalue_threshold),
-        )
-
-    if filter_column is not None:
-        dset = dset.with_data(
-            dset.data.filter(filter_column),
-        )
+    rolled = _roll_up_basic(
+        dset,
+        entity_key_columns=[dset.protein_column],
+        sample_column=dset.sample_column,
+        feature_key_columns=None,
+        intensity_columns=output_intensity_columns,
+        intensity_reduction=reduction,
+        preserved_column_reductions={dset.target_column: "max"},
+        qvalue_threshold=qvalue_threshold,
+        filter_column=filter_column,
+    )
 
     return ProteinIntensityDataset(
-        dset.data.groupBy(dset.proteins, dset.samples).agg(
-            _fns.max(dset.targets).alias(dset.target_column),
-            reduction(dset.intensities).alias("intensity"),
-        ),
+        rolled,
         sample_column=dset.sample_column,
-        intensity_column="intensity",
+        intensity_column=intensity_column,
+        intensity_columns=list(output_intensity_columns.values()),
         protein_column=dset.protein_column,
         protein_delim=dset.protein_delim,
         target_column=dset.target_column,
         score_columns=[],
+        semantics={
+            **{
+                column_name: dset.semantics[column_name]
+                for column_name in (
+                    dset.sample_column,
+                    dset.protein_column,
+                    dset.target_column,
+                )
+                if column_name in dset.semantics
+            },
+            **intensity_semantics,
+        },
     )

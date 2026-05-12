@@ -25,18 +25,21 @@ def merge_protein_confidence_and_quant(
     -------
     A combined ``ProteinIntensityConfidenceDataset``
     """
+    intensity_columns = list(prot_quant_dset.intensity_columns)
+
     return _ProteinIntensityConfidenceDataset(
         prot_conf.data.join(
             prot_quant_dset.data.select(
                 prot_quant_dset.proteins.alias(prot_conf.protein_column),
                 prot_quant_dset.samples,
-                prot_quant_dset.intensities,
+                *intensity_columns,
             ),
             on=prot_conf.protein_column,
             how="leftouter",
         ),
         sample_column=prot_quant_dset.sample_column,
         intensity_column=prot_quant_dset.intensity_column,
+        intensity_columns=intensity_columns,
         protein_column=prot_conf.protein_column,
         protein_delim=prot_conf.protein_column,
         target_column=prot_conf.target_column,
@@ -49,7 +52,7 @@ def merge_protein_confidence_and_quant(
                 k: v
                 for k in [
                     prot_quant_dset.sample_column,
-                    prot_quant_dset.intensity_column,
+                    *intensity_columns,
                 ]
                 if (v := prot_quant_dset.semantics.get(k, None)) is not None
             },
