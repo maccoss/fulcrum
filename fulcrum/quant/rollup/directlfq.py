@@ -222,7 +222,14 @@ def _estimate_directlfq_partition(
     for column_name, value in entity_label.items():
         merged_tracks[column_name] = value
 
-    return merged_tracks[result_columns]
+    result = merged_tracks[result_columns].copy()
+
+    # Normalize returned key columns to plain Python-object dtype before
+    # Spark/Arrow serializes the pandas UDF result.
+    for column_name in [*entity_key_columns, sample_column]:
+        result[column_name] = result[column_name].astype(object)
+
+    return result
 
 
 def roll_up_directlfq(
