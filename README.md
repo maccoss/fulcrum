@@ -103,8 +103,7 @@ appropriate `spark_config` section in the workflow parameters:
 ```
 
 When calling Fulcrum from Python, you can either specify a
-[spark_config]{.title-ref} or pass a `SparkSession`{.interpreted-text
-role="py:class"} using the [spark]{.title-ref} parameter.
+`spark_config` dict or pass a `SparkSession` using the `spark` parameter.
 
 ``` python
 fulcrum(
