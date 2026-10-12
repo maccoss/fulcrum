@@ -275,6 +275,77 @@ def test_roll_up_directlfq_supports_multiple_tracks_and_preserved_reductions(
     assert rows[("s2", "P1")]["protein_normalized"] > 0
 
 
+def test_roll_up_directlfq_preserves_plate_id_for_positive_intensities(
+    spark_session,
+):
+    pytest.importorskip("directlfq")
+
+    dataset = PsmIntensityConfidenceDataset(
+        spark_session.createDataFrame(
+            [
+                ("s1", "P1", "pepA", 2, True, 0.01, 10.0, "plate-1"),
+                ("s2", "P1", "pepA", 2, True, 0.01, 12.0, "plate-1"),
+                ("s1", "P1", "pepB", 2, True, 0.01, 8.0, "plate-1"),
+                ("s2", "P1", "pepB", 2, True, 0.01, 9.0, "plate-1"),
+                ("s1", "P2", "pepA", 2, True, 0.01, 20.0, "plate-2"),
+                ("s2", "P2", "pepA", 2, True, 0.01, 22.0, "plate-2"),
+                ("s1", "P2", "pepB", 2, True, 0.01, 16.0, "plate-2"),
+                ("s2", "P2", "pepB", 2, True, 0.01, 18.0, "plate-2"),
+            ],
+            schema=[
+                "sample",
+                "protein_group",
+                "peptide",
+                "charge",
+                "target",
+                "qvalue",
+                "raw_intensity",
+                "plate_id",
+            ],
+        ),
+        sample_column="sample",
+        target_column="target",
+        qvalue_column="qvalue",
+        intensity_column="raw_intensity",
+        intensity_columns=["raw_intensity"],
+        score_columns=[],
+        peptide_column="peptide",
+        charge_column="charge",
+        protein_column="protein_group",
+        protein_delim=";",
+        spectrum_columns=[],
+    )
+
+    rolled = roll_up_directlfq(
+        dataset,
+        entity_key_columns=["protein_group"],
+        sample_column="sample",
+        feature_key_columns=["peptide", "charge"],
+        intensity_columns={"raw_intensity": "protein_raw"},
+        preserved_column_reductions={"plate_id": "first"},
+        qvalue_threshold=0.05,
+    )
+
+    rows = {
+        (row["sample"], row["protein_group"]): row.asDict()
+        for row in rolled.collect()
+    }
+
+    assert set(rows) == {
+        ("s1", "P1"),
+        ("s2", "P1"),
+        ("s1", "P2"),
+        ("s2", "P2"),
+    }
+    assert {key: row["plate_id"] for key, row in rows.items()} == {
+        ("s1", "P1"): "plate-1",
+        ("s2", "P1"): "plate-1",
+        ("s1", "P2"): "plate-2",
+        ("s2", "P2"): "plate-2",
+    }
+    assert all(row["plate_id"] is not None for row in rows.values())
+
+
 def test_roll_up_directlfq_preserves_output_contract_without_preserved_columns(
     intensity_confidence_dataset,
 ):

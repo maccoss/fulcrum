@@ -15,6 +15,7 @@ import pandas as _pd
 from pyspark.sql import (
     Column as _Column,
     DataFrame as _DataFrame,
+    Window as _Window,
     functions as _fns,
 )
 from pyspark.sql.types import (
@@ -23,6 +24,7 @@ from pyspark.sql.types import (
     StructField as _StructField,
     StructType as _StructType,
 )
+from pyspark.storagelevel import StorageLevel as _StorageLevel
 
 _logger = _logging.getLogger(__name__)
 
@@ -332,9 +334,22 @@ def roll_up_directlfq(
     entity_map = (
         filtered.data.select(*entity_keys)
         .distinct()
-        .withColumn("__entity_id", _fns.monotonically_increasing_id())
-        .cache()
+        .withColumn(
+            "__entity_id",
+            _fns.row_number()
+            .over(
+                _Window.orderBy(
+                    *[
+                        _fns.col(column).asc_nulls_first()
+                        for column in entity_keys
+                    ]
+                )
+            )
+            .cast(_LongType()),
+        )
+        .persist(_StorageLevel.DISK_ONLY)
     )
+    entity_map.count()
     data_with_aliases = filtered.data.alias("__directlfq_data")
     entity_map_with_aliases = entity_map.alias("__directlfq_entity_map")
     entity_join_condition = _reduce(
